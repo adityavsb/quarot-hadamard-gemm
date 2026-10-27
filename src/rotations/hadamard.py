@@ -51,11 +51,10 @@ def generate_random_signs(d: int, seed: Optional[int] = None, dtype: torch.dtype
     """
     gen = None
     if seed is not None:
-        dev_obj = torch.device(device) if device is not None else None
-        gen_dev = dev_obj.type if dev_obj and dev_obj.type != "mps" else "cpu"
-        gen = torch.Generator(device=gen_dev)
+        gen = torch.Generator(device="cpu")
         gen.manual_seed(seed)
-        
-    bits = torch.randint(0, 2, (d,), generator=gen, device=device)
-    signs = (bits * 2 - 1).to(dtype=dtype)
+
+    # Draw on CPU for cross-device determinism, then move.
+    bits = torch.randint(0, 2, (d,), generator=gen, device="cpu")
+    signs = (bits * 2 - 1).to(dtype=dtype, device=device)
     return signs

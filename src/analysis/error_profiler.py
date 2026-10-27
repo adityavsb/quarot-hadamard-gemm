@@ -22,8 +22,8 @@ def compute_reconstruction_metrics(exact: torch.Tensor, quantized: torch.Tensor)
     Returns:
         ReconstructionMetrics dataclass.
     """
-    diff = (exact - quantized).to(torch.float64)
-    exact_f64 = exact.to(torch.float64)
+    diff = (exact - quantized).detach().cpu().to(torch.float64)
+    exact_f64 = exact.detach().cpu().to(torch.float64)
     
     noise_norm = diff.norm().item()
     signal_norm = exact_f64.norm().item()
