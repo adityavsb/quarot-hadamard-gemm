@@ -20,38 +20,63 @@ A fictional, fully-disclaimed deployment story that motivates the memory numbers
 ## Mathematical Formulation
 
 ### 1. Invariance of Linear Projections
+
 Let $\mathbf{W} \in \mathbb{R}^{m \times d}$ be a projection weight matrix and $\mathbf{X} \in \mathbb{R}^{d \times n}$ be an input activation tensor. Let $\mathbf{H} \in \mathbb{R}^{d \times d}$ be an orthogonal matrix satisfying:
-$$\mathbf{H}^T \mathbf{H} = \mathbf{H} \mathbf{H}^T = \mathbf{I}_d$$
+
+$$
+\mathbf{H}^T \mathbf{H} = \mathbf{H} \mathbf{H}^T = \mathbf{I}_d
+$$
 
 The linear projection can be factored without approximation error:
-$$\mathbf{Y} = \mathbf{W} \mathbf{X} = \mathbf{W} \mathbf{I}_d \mathbf{X} = \mathbf{W} (\mathbf{H}^T \mathbf{H}) \mathbf{X} = (\mathbf{W} \mathbf{H}^T) (\mathbf{H} \mathbf{X})$$
 
-We define:
-$$\tilde{\mathbf{W}} \triangleq \mathbf{W} \mathbf{H}^T, \quad \tilde{\mathbf{X}} \triangleq \mathbf{H} \mathbf{X}$$
+$$
+\mathbf{Y} = \mathbf{W} \mathbf{X} = \mathbf{W} \mathbf{I}_d \mathbf{X} = \mathbf{W} (\mathbf{H}^T \mathbf{H}) \mathbf{X} = (\mathbf{W} \mathbf{H}^T) (\mathbf{H} \mathbf{X})
+$$
+
+We define the rotated weights and activations:
+
+$$
+\tilde{\mathbf{W}} = \mathbf{W} \mathbf{H}^T, \quad \tilde{\mathbf{X}} = \mathbf{H} \mathbf{X}
+$$
 
 ### 2. Randomized Sylvester-Hadamard Matrices
-A normalized Walsh-Hadamard matrix of order $2^k$ is constructed recursively via the Sylvester Kronecker formulation:
-$$\mathbf{H}_1 = [1], \quad \mathbf{H}_{2^k} = \frac{1}{\sqrt{2}} \begin{pmatrix} \mathbf{H}_{2^{k-1}} & \mathbf{H}_{2^{k-1}} \\ \mathbf{H}_{2^{k-1}} & -\mathbf{H}_{2^{k-1}} \end{pmatrix}$$
 
-To prevent alignment with structured coordinate axes, we introduce a randomized diagonal sign matrix $\mathbf{S} = \text{diag}(s_1, \dots, s_d)$ where each $s_i \in \{-1, +1\}$ with equal probability $\frac{1}{2}$:
-$$\mathbf{H}_{\text{rand}} = \mathbf{H}_d \mathbf{S}$$
+A normalized Walsh-Hadamard matrix of order $2^k$ is constructed recursively via the Sylvester Kronecker formulation:
+
+$$
+\mathbf{H}_1 = [1], \quad \mathbf{H}_{2^k} = \frac{1}{\sqrt{2}} \begin{pmatrix} \mathbf{H}_{2^{k-1}} & \mathbf{H}_{2^{k-1}} \\ \mathbf{H}_{2^{k-1}} & -\mathbf{H}_{2^{k-1}} \end{pmatrix}
+$$
+
+To prevent alignment with structured coordinate axes, we introduce a randomized diagonal sign matrix $\mathbf{S} = \mathrm{diag}(s_1, \dots, s_d)$ where each $s_i \in \{-1, +1\}$ with equal probability $\frac{1}{2}$:
+
+$$
+\mathbf{H}_{\text{rand}} = \mathbf{H}_d \mathbf{S}
+$$
 
 Because both $\mathbf{H}_d$ and $\mathbf{S}$ are orthogonal, their product $\mathbf{H}_{\text{rand}}$ is strictly orthogonal:
-$$\mathbf{H}_{\text{rand}}^T \mathbf{H}_{\text{rand}} = \mathbf{S}^T \mathbf{H}_d^T \mathbf{H}_d \mathbf{S} = \mathbf{S} \mathbf{I}_d \mathbf{S} = \mathbf{I}_d$$
+
+$$
+\mathbf{H}_{\text{rand}}^T \mathbf{H}_{\text{rand}} = \mathbf{S}^T \mathbf{H}_d^T \mathbf{H}_d \mathbf{S} = \mathbf{S} \mathbf{I}_d \mathbf{S} = \mathbf{I}_d
+$$
 
 This is the randomised Hadamard transform of Ailon & Chazelle [5], used for quantisation by QuIP# [6] and QuaRot [1].
 
 ### 3. Fast Walsh-Hadamard Transform (FWHT)
+
 Computing $\mathbf{H}_d \mathbf{x}$ directly via matrix-vector multiplication requires $d^2$ floating-point multiply-accumulate operations. The Fast Walsh-Hadamard Transform evaluates this product recursively using a butterfly graph in $\log_2(d)$ stages:
 
-$$\mathbf{y}^{(k)}_i = \mathbf{y}^{(k-1)}_i + \mathbf{y}^{(k-1)}_{i + 2^{k-1}}, \quad \mathbf{y}^{(k)}_{i + 2^{k-1}} = \mathbf{y}^{(k-1)}_i - \mathbf{y}^{(k-1)}_{i + 2^{k-1}}$$
+$$
+\mathbf{y}^{(k)}_i = \mathbf{y}^{(k-1)}_i + \mathbf{y}^{(k-1)}_{i + 2^{k-1}}, \quad \mathbf{y}^{(k)}_{i + 2^{k-1}} = \mathbf{y}^{(k-1)}_i - \mathbf{y}^{(k-1)}_{i + 2^{k-1}}
+$$
 
-$$\text{ops} = d \log_2 d \text{ additions/subtractions} + d \text{ multiplications (normalisation)}$$
+$$
+\text{Operations} = d \log_2 d \text{ (additions/subtractions)} + d \text{ (normalisation)}
+$$
 
 For a hidden dimension of $d = 4096$:
-* Dense Matrix Multiplication: $4096^2 = \mathbf{16,777,216\text{ operations}}$
-* Fast Walsh-Hadamard Transform: $4096 \times 12 = \mathbf{49,152\text{ operations}}$
-* **Theoretical Speedup of Transform:** $\mathbf{341\times}$ fewer operations.
+* **Dense Matrix Multiplication:** $4096^2 = 16{,}777{,}216$ operations
+* **Fast Walsh-Hadamard Transform:** $4096 \times 12 = 49{,}152$ operations
+* **Theoretical Speedup of Transform:** $341\times$ fewer operations
 
 ---
 
@@ -64,20 +89,20 @@ Benchmarked directly on an Apple M4 Mac mini ($d=4096$, $B=128$, synthetic outli
 ### 1. Activation Outlier Suppression Profile
 | Metric | Unrotated Activations | Rotated Activations (QuaRot) | Suppression Delta |
 | :--- | :---: | :---: | :---: |
-| **Max Absolute Peak ($\|X\|_\infty$)** | $95.92$ | **$14.34$** | **$6.69\times$ lower** |
-| **Peak-to-Average Ratio (PAR)** | $100.52$ | **$4.81$** | **$20.90\times$ lower** |
-| **Excess Kurtosis ($\kappa$)** | $459.68$ | **$-0.20$** | **Normalized to Gaussian** |
-| **P99 to Max Ratio** | $36.17$ | **$1.56$** | **$23.24\times$ tighter envelope** |
+| **Max Absolute Peak** ($\Vert X \Vert_\infty$) | 95.92 | **14.34** | **6.69× lower** |
+| **Peak-to-Average Ratio (PAR)** | 100.52 | **4.81** | **20.90× lower** |
+| **Excess Kurtosis** ($\kappa$) | 459.68 | **−0.20** | **Normalized to Gaussian** |
+| **P99 to Max Ratio** | 36.17 | **1.56** | **23.24× tighter envelope** |
 
 ### 2. Linear Projection Reconstruction Fidelity (W4A4)
 | Metric | Naïve INT4 (Unrotated) | Rotated INT4 (QuaRot W4A4) | Improvement Delta |
 | :--- | :---: | :---: | :---: |
-| **Relative Frobenius Error** | $0.3123$ | **$0.2061$** | **$1.52\times$ lower error** |
-| **Signal-to-Noise Ratio (SQNR)** | $10.11\text{ dB}$ | **$13.72\text{ dB}$** | **$+3.61\text{ dB}$ gain** |
-| **Max Absolute Point Error** | $7.9663$ | **$5.4134$** | **$1.47\times$ tighter bound** |
-| **Mean Squared Error (MSE)** | $2.702397$ | **$1.176803$** | **$2.30\times$ lower MSE** |
-| **Background-channel rel. error** (error of the 4 088 non-outlier channels' contribution to Y) | $1.1619$ | **$0.7667$** | — |
-| **Outlier channels' share of $\|Y\|_F^2$** | $0.928$ | $0.928$ | explains why the Frobenius rows move less than the narrative suggests |
+| **Relative Frobenius Error** | 0.3123 | **0.2061** | **1.52× lower error** |
+| **Signal-to-Noise Ratio (SQNR)** | 10.11 dB | **13.72 dB** | **+3.61 dB gain** |
+| **Max Absolute Point Error** | 7.9663 | **5.4134** | **1.47× tighter bound** |
+| **Mean Squared Error (MSE)** | 2.702397 | **1.176803** | **2.30× lower MSE** |
+| **Background-channel rel. error** (error of the 4,088 non-outlier channels' contribution to Y) | 1.1619 | **0.7667** | — |
+| **Outlier channels' share of** $\Vert Y \Vert_F^2$ | 0.928 | 0.928 | explains why Frobenius rows move less than narrative suggests |
 
 Naive per-token INT4 quantises 100 % of background-channel entries to zero at this outlier scale; relative Frobenius error still reads 0.31 because 93 % of the output energy comes from the 8 outlier channels. Use the background-channel row to judge information loss.
 

@@ -16,9 +16,16 @@ When running an open-weights 8-billion parameter foundation model (such as LLaMA
 * **Model Static Footprint:** $8.03 \times 10^9 \times 2\text{ bytes} \approx \mathbf{16.06\text{ GB}}$ VRAM just to load weights into memory.
 * **Remaining VRAM for Inference Buffers:** $24.0\text{ GB} - 16.06\text{ GB} = \mathbf{7.94\text{ GB}}$.
 * **The Long-Context KV-Cache Crisis:** Clinical summaries frequently involve historical chart ingestion spanning 8,192 to 16,384 tokens. For an 8B model with grouped-query attention (32 layers, 8 KV heads, head dimension 128 — LLaMA-3-8B and Mistral-7B both use 8 KV heads), the KV-cache memory requirement scales linearly with context length $L$ and batch size $B$:
-  $$\text{KV-Cache (bytes)} = 2 \times B \times L \times N_{\text{layers}} \times (N_{\text{kv heads}} \cdot d_{\text{head}}) \times \text{bytes per element}$$
+
+  $$
+  \text{KV-Cache (bytes)} = 2 \times B \times L \times N_{\text{layers}} \times (N_{\text{kv heads}} \cdot d_{\text{head}}) \times \text{bytes per element}
+  $$
+
   At batch size $B=8$ and context length $L=16{,}384$, the FP16 KV-cache requires:
-  $$2 \times 8 \times 16384 \times 32 \times 1024 \times 2 \approx \mathbf{17.18\text{ GB}}$$
+
+  $$
+  2 \times 8 \times 16384 \times 32 \times 1024 \times 2 \approx \mathbf{17.18\text{ GB}}
+  $$
 * **The Consequence:** Total memory required is $16.06\text{ GB} + 17.18\text{ GB} = \mathbf{33.24\text{ GB}} \gg 24\text{ GB}$. The system suffers Out-Of-Memory (OOM) crashes, forcing the hospital to throttle concurrency to $B \le 3$ ($16.06 + 3 \times 2.15 = 22.5\text{ GB} < 24$). Doctors experience queuing delays exceeding 90 seconds per patient record, violating the clinical 15-second SLA.
 
 ### 3. The Failed Attempt: Standard INT4 Post-Training Quantization
@@ -29,7 +36,9 @@ To compress both weights and the KV-cache into the 24GB envelope, engineering ap
 **The Catastrophic Failure Mode:**
 Modern transformer architectures naturally develop **systematic activation outliers** in deep residual layers. Approximately $0.1\%$ of hidden-state channels exhibit peak amplitudes one to two orders of magnitude above the bulk (Dettmers et al. [3] report values up to ≈60 at 6.7B+ parameters), while $99.9\%$ of channel features stay tightly clustered within $[-1.5, +1.5]$:
 
-$$\Delta = \frac{\max(|X|)}{2^{b-1} - 1} = \frac{60}{7} \approx 8.57$$
+$$
+\Delta = \frac{\max(|X|)}{2^{b-1} - 1} = \frac{60}{7} \approx 8.57
+$$
 
 Under this quantization step size ($\Delta = 8.57$), every normal feature value between $-4.3$ and $+4.3$ rounds to **zero**. Fine-grained diagnostic signals (such as medication dosages and micro-differential symptoms) are completely erased.
 
@@ -49,7 +58,10 @@ Outlier-Free Rotated PTQ (Energy dispersed):
 ```
 
 1. **Orthogonal Invariance:** By inserting orthogonal Hadamard matrices $\mathbf{H} \in \mathbb{R}^{d \times d}$ ($\mathbf{H}^T \mathbf{H} = \mathbf{I}$) between weights $\mathbf{W}$ and activations $\mathbf{X}$:
-   $$\mathbf{Y} = \mathbf{W} \mathbf{X} = (\mathbf{W} \mathbf{H}^T) (\mathbf{H} \mathbf{X}) = \tilde{\mathbf{W}} \tilde{\mathbf{X}}$$
+
+   $$
+   \mathbf{Y} = \mathbf{W} \mathbf{X} = (\mathbf{W} \mathbf{H}^T) (\mathbf{H} \mathbf{X}) = \tilde{\mathbf{W}} \tilde{\mathbf{X}}
+   $$
    * $\tilde{\mathbf{W}} = \mathbf{W} \mathbf{H}^T$ is computed once offline and quantized to INT4.
    * $\tilde{\mathbf{X}} = \mathbf{H} \mathbf{X}$ is computed on-the-fly during inference.
 2. **Energy dispersion:** The randomised Hadamard transform spreads each coordinate's energy evenly over all $d$ coordinates. The energy of outlier channels is distributed uniformly across all $d$ dimensions.

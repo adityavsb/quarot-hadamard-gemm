@@ -61,7 +61,11 @@ While primary attention dimensions are powers of two ($d_{\text{model}} \in \{20
 
 ### Decision
 We implement a **Block-Diagonal Hadamard Decomposition** for non-power-of-two dimensions:
-$$\mathbf{H}_{\text{block}} = \begin{pmatrix} \mathbf{H}_{d_1} & \mathbf{0} & \dots \\ \mathbf{0} & \mathbf{H}_{d_2} & \dots \\ \vdots & \vdots & \ddots \end{pmatrix}$$
+
+$$
+\mathbf{H}_{\text{block}} = \begin{pmatrix} \mathbf{H}_{d_1} & \mathbf{0} & \dots \\ \mathbf{0} & \mathbf{H}_{d_2} & \dots \\ \vdots & \vdots & \ddots \end{pmatrix}
+$$
+
 Where $d = \sum_j d_j$, with each $d_j = 2^{k_j}$ (e.g., $14,336 = 7 \times 2048$).
 
 ### Rationale & Trade-offs

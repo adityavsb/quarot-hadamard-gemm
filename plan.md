@@ -14,13 +14,20 @@ Large language models (LLMs) running at FP16/BF16 precision place severe pressur
 In modern transformer architectures (such as LLaMA and Mistral):
 * Approximately $0.1\%$ of hidden-state feature channels develop massive **activation outliers**—dimensions with values $50\times$ to $100\times$ larger than typical channel magnitudes.
 * When applying standard uniform affine or symmetric INT4 quantization:
-  $$\Delta = \frac{\max(|X|)}{2^{b-1} - 1}$$
+
+  $$
+  \Delta = \frac{\max(|X|)}{2^{b-1} - 1}
+  $$
+
   A single extreme outlier forces the step size $\Delta$ to become excessively coarse, crushing the dynamic range and quantization resolution for the remaining $99.9\%$ of features in that tensor.
 * This dynamic range collapse leads to severe perplexity degradation, output gibberish, and token collapse under standard W4A4 quantization.
 
 ### 1.2 The Mathematical Solution: Orthogonal Rotations
 Because matrix multiplication is associative, we can insert any orthogonal matrix $\mathbf{H} \in \mathbb{R}^{d \times d}$ ($\mathbf{H}^T \mathbf{H} = \mathbf{I}$) between weights $\mathbf{W}$ and activations $\mathbf{X}$ without altering the mathematical output:
-$$\mathbf{Y} = \mathbf{W} \mathbf{X} = (\mathbf{W} \mathbf{H}^T) (\mathbf{H} \mathbf{X}) = \tilde{\mathbf{W}} \tilde{\mathbf{X}}$$
+
+$$
+\mathbf{Y} = \mathbf{W} \mathbf{X} = (\mathbf{W} \mathbf{H}^T) (\mathbf{H} \mathbf{X}) = \tilde{\mathbf{W}} \tilde{\mathbf{X}}
+$$
 
 Where:
 * $\tilde{\mathbf{W}} = \mathbf{W} \mathbf{H}^T$ is pre-computed offline and quantized to INT4.
@@ -90,7 +97,10 @@ quarot-hadamard-gemm/
 
 ### Phase 1: Orthogonal Transforms & Vectorized FWHT
 * Implement recursive Sylvester construction for Hadamard matrices:
-  $$\mathbf{H}_{2k} = \begin{pmatrix} \mathbf{H}_k & \mathbf{H}_k \\ \mathbf{H}_k & -\mathbf{H}_k \end{pmatrix}$$
+
+  $$
+  \mathbf{H}_{2k} = \begin{pmatrix} \mathbf{H}_k & \mathbf{H}_k \\ \mathbf{H}_k & -\mathbf{H}_k \end{pmatrix}
+  $$
 * Implement randomized sign diagonal $\mathbf{S} \in \{-1, +1\}^d$ to guarantee orthogonal mixing across all basis vectors.
 * Implement Fast Walsh-Hadamard Transform (FWHT) exploiting power-of-two recursive butterfly additions/subtractions in $\mathcal{O}(d \log d)$.
 * Implement block-diagonal padding/chunking for dimensions where $d \neq 2^k$ (e.g., $d = 4096$ vs $d = 2880$).
@@ -98,7 +108,10 @@ quarot-hadamard-gemm/
 
 ### Phase 2: Quantization Engine & Outlier Profiling
 * Implement symmetric uniform INT4 quantizer:
-  $$q = \text{clip}\left(\left\lfloor \frac{x}{\Delta} \right\rceil, -8, 7\right), \quad \hat{x} = q \cdot \Delta$$
+
+  $$
+  q = \text{clip}\left(\left\lfloor \frac{x}{\Delta} \right\rceil, -8, 7\right), \quad \hat{x} = q \cdot \Delta
+  $$
 * Support per-tensor, per-channel, and per-group ($G=128$) quantization granularities.
 * Build statistical profiler measuring:
   * Maximum absolute amplitude: $\|X\|_\infty$
