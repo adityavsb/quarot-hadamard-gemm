@@ -228,6 +228,12 @@ Key architectural decisions are documented under [`docs/decisions.md`](docs/deci
 
 ---
 
+## What I learned
+
+<!-- Written by the author reflecting on measured findings: eager PyTorch FWHT vs GEMM latency, the ~13 dB RTN floor, background-channel error, and open kernel optimizations -->
+
+---
+
 ## Disclaimers & Legal Notice
 
 * **Educational & Research Reproduction:** This repository is an independent open-source research and engineering reproduction. It is not affiliated with, sponsored by, or endorsed by ETH Zurich, Microsoft Research, Meta, or any medical entity.
