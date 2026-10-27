@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![ci](https://github.com/adityavsb/quarot-hadamard-gemm/actions/workflows/ci.yml/badge.svg)](https://github.com/adityavsb/quarot-hadamard-gemm/actions/workflows/ci.yml)
 
-A synthetic test harness and reference implementation evaluating **randomized orthogonal Hadamard rotations** (following *QuaRot*; *SpinQuant*'s learned rotations are related work, not implemented here) to eliminate activation outliers prior to 4-bit post-training quantization (PTQ) of weights and activations (W4A4). Quantisation is simulated ("fake quantisation": quantise → dequantise → float32 matmul); there is no integer GEMM, no bit-packing and no KV-cache code in this repository.
+A synthetic test harness and reference implementation evaluating **randomized orthogonal Hadamard rotations** (following *QuaRot*; *SpinQuant*'s learned rotations are related work, not implemented here) to eliminate activation outliers prior to 4-bit post-training quantization (PTQ) of weights and activations (W4A4). Quantisation is simulated ("fake quantisation": quantise → dequantise → float32 matmul); there is no integer GEMM, no bit-packing and no key-value cache code in this repository.
 
 ---
 

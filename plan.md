@@ -1,6 +1,6 @@
 # Project Plan: Outlier-Free Matrix Rotations for 4-Bit LLM Quantization (`quarot-hadamard-gemm`)
 
-## Benchmarking Randomized Fast Walsh-Hadamard Rotations for Lossless W4A4 GEMM and KV-Cache Compression
+## Benchmarking Randomized Fast Walsh-Hadamard Rotations for 4-Bit Activation and Weight Quantization
 
 A synthetic test harness and reference implementation evaluating **randomized orthogonal Hadamard rotations** (following *QuaRot*; *SpinQuant*'s learned rotations are related work, not implemented here) to eliminate activation outliers prior to 4-bit post-training quantization (PTQ).
 
@@ -9,14 +9,14 @@ A synthetic test harness and reference implementation evaluating **randomized or
 ## 1. Executive Summary & Problem Formulation
 
 ### 1.1 The Activation Outlier Bottleneck
-Large language models (LLMs) running at FP16/BF16 precision place severe pressure on GPU memory capacity and memory bandwidth. While model weights can easily be quantized to INT4 using offline methods (e.g., AWQ, GPTQ), **quantizing activations (W4A4) and the KV-cache to 4-bit remains notoriously unstable**.
+Large language models (LLMs) running at FP16/BF16 precision place severe pressure on GPU memory capacity and memory bandwidth. While model weights can easily be quantized to INT4 using offline methods (e.g., AWQ, GPTQ), **quantizing activations (W4A4) to 4-bit remains notoriously unstable**.
 
 In modern transformer architectures (such as LLaMA and Mistral):
 * Approximately $0.1\%$ of hidden-state feature channels develop massive **activation outliers**—dimensions with values $50\times$ to $100\times$ larger than typical channel magnitudes.
 * When applying standard uniform affine or symmetric INT4 quantization:
   $$\Delta = \frac{\max(|X|)}{2^{b-1} - 1}$$
   A single extreme outlier forces the step size $\Delta$ to become excessively coarse, crushing the dynamic range and quantization resolution for the remaining $99.9\%$ of features in that tensor.
-* This dynamic range collapse leads to severe perplexity degradation, output gibberish, and token collapse under standard W4A4 and W4KV4 quantization.
+* This dynamic range collapse leads to severe perplexity degradation, output gibberish, and token collapse under standard W4A4 quantization.
 
 ### 1.2 The Mathematical Solution: Orthogonal Rotations
 Because matrix multiplication is associative, we can insert any orthogonal matrix $\mathbf{H} \in \mathbb{R}^{d \times d}$ ($\mathbf{H}^T \mathbf{H} = \mathbf{I}$) between weights $\mathbf{W}$ and activations $\mathbf{X}$ without altering the mathematical output:
@@ -41,7 +41,7 @@ Where:
 | **Reconstruction Error (Frobenius)** | Relative error $> 0.25$ under INT4 | Relative error $< 0.25$ under INT4 (RTN floor ≈ 0.22) |
 | **Signal-to-Quantization-Noise (SQNR)** | $< 12\text{ dB}$ | $> 13\text{ dB}$ (RTN floor ≈ 13 dB); $> 24\text{ dB}$ requires clipping search or GPTQ (out of scope) |
 | **Rotation Kernel Overhead** | Dense GEMM: $\mathcal{O}(d^2)$ ($> 15\%$ compute overhead) | Butterfly FWHT: $\mathcal{O}(d \log d)$ (target $< 2\%$; **measured 58.3% on CPU, 89.8% on MPS in eager PyTorch — not met**) |
-| **Memory Footprint** | $16\text{ GB}$ (FP16 baseline for 8B model) | $4.8\text{ GB}$ (W4A4 + 4-bit KV-cache, $70\%$ reduction) — **not measured; no integer kernel in this repo** |
+| **Memory Footprint** | $16\text{ GB}$ (FP16 baseline for 8B model) | $4.8\text{ GB}$ (W4A4, theoretical $70\%$ reduction) — **not measured; no integer kernel in this repo** |
 
 ---
 
