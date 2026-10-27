@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install (CPU torch)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch
+          python -m pip install -e ".[dev]"
+      - name: Lint
+        run: |
+          ruff check quarot_hadamard tests experiments
+          black --check quarot_hadamard tests experiments
+      - name: Test
+        run: python -m pytest -q
+      - name: Smoke benchmark (small, deterministic numbers only)
+        run: python experiments/run_ptq_comparison.py --dim 1024 --batch 32 --reps 3 --out /tmp/smoke.json

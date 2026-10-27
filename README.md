@@ -3,7 +3,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![ci](https://github.com/adityavsb/quarot-hadamard-gemm/actions/workflows/ci.yml/badge.svg)](https://github.com/adityavsb/quarot-hadamard-gemm/actions/workflows/ci.yml)
 
 An empirical systems research harness and prototype implementation evaluating **randomized orthogonal Hadamard rotations** (following *QuaRot*; *SpinQuant*'s learned rotations are related work, not implemented here) to eliminate activation outliers prior to 4-bit post-training quantization (PTQ) of weights, activations (W4A4), and KV-caches.
 
