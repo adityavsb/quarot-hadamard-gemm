@@ -15,8 +15,8 @@ sweep:
 	$(PYTHON) experiments/run_synthetic_bench.py --out results/synthetic_sweep.csv
 
 lint:
-	$(PYTHON) -m ruff check src/ tests/ experiments/
-	$(PYTHON) -m black --check src/ tests/ experiments/
+	$(PYTHON) -m ruff check quarot_hadamard/ tests/ experiments/
+	$(PYTHON) -m black --check quarot_hadamard/ tests/ experiments/
 
 clean:
 	rm -rf build/ dist/ *.egg-info .pytest_cache .ruff_cache

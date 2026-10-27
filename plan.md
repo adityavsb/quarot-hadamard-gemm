@@ -56,7 +56,7 @@ quarot-hadamard-gemm/
 ├── LICENSE                            # MIT License
 ├── docs/
 │   └── decisions.md                   # Architecture Decision Records (ADRs)
-├── src/
+├── quarot_hadamard/
 │   ├── __init__.py
 │   ├── rotations/
 │   │   ├── __init__.py

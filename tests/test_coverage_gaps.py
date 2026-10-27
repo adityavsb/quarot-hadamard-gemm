@@ -4,16 +4,16 @@ block-diagonal FWHT (ADR-003), the quantised RotatedLinear forward, bias, and fa
 import pytest
 import torch
 
-from src.analysis.outlier_metrics import compute_outlier_profile
-from src.kernels.rotated_linear import RotatedLinear
-from src.quantization.uniform_int4 import (
+from quarot_hadamard.analysis.outlier_metrics import compute_outlier_profile
+from quarot_hadamard.kernels.rotated_linear import RotatedLinear
+from quarot_hadamard.quantization.uniform_int4 import (
     Granularity,
     dequantize_symmetric_int4,
     fake_quantize_int4,
     quantize_symmetric_int4,
 )
-from src.rotations.fwht import rotated_vector
-from src.rotations.hadamard import generate_random_signs
+from quarot_hadamard.rotations.fwht import rotated_vector
+from quarot_hadamard.rotations.hadamard import generate_random_signs
 
 
 @pytest.mark.parametrize("granularity", [Granularity.PER_TENSOR, Granularity.PER_TOKEN, Granularity.PER_CHANNEL, Granularity.GROUP_WISE])

@@ -3,8 +3,8 @@
 import pytest
 import torch
 
-from src.rotations.hadamard import get_hadamard_matrix, generate_random_signs
-from src.rotations.fwht import fast_walsh_hadamard_transform, rotated_vector
+from quarot_hadamard.rotations.hadamard import get_hadamard_matrix, generate_random_signs
+from quarot_hadamard.rotations.fwht import fast_walsh_hadamard_transform, rotated_vector
 
 
 @pytest.mark.parametrize("d", [2, 4, 8, 16, 64, 256, 1024])

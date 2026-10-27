@@ -4,16 +4,16 @@ import pytest
 import torch
 import torch.nn as nn
 
-from src.quantization.uniform_int4 import (
+from quarot_hadamard.quantization.uniform_int4 import (
     quantize_symmetric_int4,
     dequantize_symmetric_int4,
     Granularity,
 )
-from src.rotations.fwht import rotated_vector
-from src.rotations.hadamard import generate_random_signs
-from src.kernels.rotated_linear import RotatedLinear
-from src.analysis.outlier_metrics import compute_outlier_profile
-from src.analysis.error_profiler import compute_reconstruction_metrics
+from quarot_hadamard.rotations.fwht import rotated_vector
+from quarot_hadamard.rotations.hadamard import generate_random_signs
+from quarot_hadamard.kernels.rotated_linear import RotatedLinear
+from quarot_hadamard.analysis.outlier_metrics import compute_outlier_profile
+from quarot_hadamard.analysis.error_profiler import compute_reconstruction_metrics
 
 
 def test_quantization_bounds():

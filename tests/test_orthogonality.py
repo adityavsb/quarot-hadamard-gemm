@@ -3,7 +3,7 @@
 import pytest
 import torch
 
-from src.rotations.hadamard import get_hadamard_matrix, generate_random_signs
+from quarot_hadamard.rotations.hadamard import get_hadamard_matrix, generate_random_signs
 
 
 @pytest.mark.parametrize("d", [2, 4, 8, 16, 32, 64])

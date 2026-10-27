@@ -15,14 +15,14 @@ import torch
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from experiments.run_ptq_comparison import generate_synthetic_activations
-from src.analysis.error_profiler import compute_background_error, compute_reconstruction_metrics
-from src.quantization.uniform_int4 import (
+from quarot_hadamard.analysis.error_profiler import compute_background_error, compute_reconstruction_metrics
+from quarot_hadamard.quantization.uniform_int4 import (
     Granularity,
     dequantize_symmetric_int4,
     quantize_symmetric_int4,
 )
-from src.rotations.fwht import rotated_vector
-from src.rotations.hadamard import generate_random_signs
+from quarot_hadamard.rotations.fwht import rotated_vector
+from quarot_hadamard.rotations.hadamard import generate_random_signs
 
 
 def fake_w4a4(X: torch.Tensor, W: torch.Tensor, signs: torch.Tensor | None) -> torch.Tensor:
