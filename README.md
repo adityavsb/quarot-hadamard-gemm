@@ -91,6 +91,8 @@ $$\mathbf{H}_{\text{rand}} = \mathbf{H}_d \mathbf{S}$$
 Because both $\mathbf{H}_d$ and $\mathbf{S}$ are orthogonal, their product $\mathbf{H}_{\text{rand}}$ is strictly orthogonal:
 $$\mathbf{H}_{\text{rand}}^T \mathbf{H}_{\text{rand}} = \mathbf{S}^T \mathbf{H}_d^T \mathbf{H}_d \mathbf{S} = \mathbf{S} \mathbf{I}_d \mathbf{S} = \mathbf{I}_d$$
 
+This is the randomised Hadamard transform of Ailon & Chazelle [5], used for quantisation by QuIP# [6] and QuaRot [1].
+
 ### 3. Fast Walsh-Hadamard Transform (FWHT)
 Computing $\mathbf{H}_d \mathbf{x}$ directly via matrix-vector multiplication requires $d^2$ floating-point multiply-accumulate operations. The Fast Walsh-Hadamard Transform evaluates this product recursively using a butterfly graph in $\log_2(d)$ stages:
 
@@ -221,6 +223,11 @@ Key architectural decisions are documented under [`docs/decisions.md`](docs/deci
 2. **Liu, Z., Zhao, C., Fedorov, I., Soran, B., Choudhary, D., Krishnamoorthi, R., Chandra, V., Tian, Y., & Blankevoort, T. (2024).** *SpinQuant: LLM Quantization with Learned Rotations.* ICLR 2025. arXiv:2405.16406.
 3. **Dettmers, T., Lewis, M., Belkada, Y., & Zettlemoyer, L. (2022).** *LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale.* NeurIPS 2022. arXiv:2208.07339.
 4. **Sylvester, J. J. (1867).** *Thoughts on Inverse Orthogonal Matrices, Simultaneous Sign-Successions, and Tessellated Pavements in Two or More Colours, with Applications to Newton's Rule, Ornamental Tile-Work, and the Theory of Numbers.* The London, Edinburgh, and Dublin Philosophical Magazine and Journal of Science, 34(232), 461–475. doi:10.1080/14786446708639914.
+5. **Ailon, N., & Chazelle, B. (2009).** *The Fast Johnson–Lindenstrauss Transform and Approximate Nearest Neighbors.* SIAM Journal on Computing, 39(1), 302–322. doi:10.1137/060673096. — origin of the randomised Hadamard construction $\mathbf{H}\,\mathrm{diag}(s)$ used here.
+6. **Tseng, A., Chee, J., Sun, Q., Kuleshov, V., & De Sa, C. (2024).** *QuIP#: Even Better LLM Quantization with Hadamard Incoherence and Lattice Codebooks.* ICML 2024. arXiv:2402.04396. — randomised Hadamard incoherence processing for LLM quantisation, which QuaRot extends to activations.
+7. **Ashkboos, S., Croci, M. L., Nascimento, M. G. do, Hoefler, T., & Hensman, J. (2024).** *SliceGPT: Compress Large Language Models by Deleting Rows and Columns.* ICLR 2024. arXiv:2401.15024. — computational-invariance argument.
+8. **Xiao, G., Lin, J., Seznec, M., Wu, H., Demouth, J., & Han, S. (2023).** *SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models.* ICML 2023. arXiv:2211.10438.
+9. **Fino, B. J., & Algazi, V. R. (1976).** *Unified Matrix Treatment of the Fast Walsh-Hadamard Transform.* IEEE Transactions on Computers, C-25(11), 1142–1146. doi:10.1109/TC.1976.1674569.
 
 ---
 
