@@ -102,6 +102,16 @@ Naive per-token INT4 quantises 100 % of background-channel entries to zero at th
 
 The naive/rotated gap is not monotone in outlier scale: it peaks near scale 20 and vanishes by 160 because the outlier channels dominate the Frobenius norm. The background-channel columns are the informative ones.
 
+### 5. Real-activation spot check (not a benchmark)
+
+Captured from `Qwen/Qwen2.5-0.5B` layer 12 `down_proj` input (intermediate dim $d=4864$, block size 128, 225 tokens):
+```
+Qwen/Qwen2.5-0.5B layer 12 down_proj input: tokens=225 d=4864 block=128
+max|x| 9.21 -> 1.51 | PAR 111.6 -> 13.8 | kurtosis 149.5 -> 1.9
+rel-Frob naive 0.5754 rotated 0.2308 | SQNR 4.80 -> 12.74 dB
+```
+Demonstrates that the block-diagonal randomised FWHT ($4864 = 38 \times 128$) successfully suppresses outliers on real transformer activations and recovers $+7.94\text{ dB}$ SQNR. Run via `python experiments/run_real_activations.py`.
+
 ---
 
 ## Targets vs. results
