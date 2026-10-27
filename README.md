@@ -141,7 +141,7 @@ quarot-hadamard-gemm/
 ├── README.md                          # Technical report, business case, and architecture
 ├── Makefile                           # Developer automation (install, test, bench)
 ├── pyproject.toml                     # Packaging and dependencies
-├── LICENSE                            # MIT License with explicit liability limitation
+├── LICENSE                            # MIT License
 ├── docs/
 │   └── decisions.md                   # Architecture Decision Records (ADRs)
 ├── src/
