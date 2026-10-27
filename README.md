@@ -13,7 +13,20 @@ A synthetic test harness and reference implementation evaluating **randomized or
 
 A handful of hidden-state channels in large transformers carry values one to two orders of magnitude above the rest [3]. Symmetric INT4 sets its step from the largest value, so those channels dictate a step that rounds the bulk to zero. Multiplying by an orthogonal matrix on both sides of a linear layer leaves the output unchanged but spreads each channel's energy across all coordinates; a randomised Walsh–Hadamard matrix does this in $d\log_2 d$ additions. This repository measures how much that helps a round-to-nearest W4A4 quantiser on synthetic activations.
 
-A fictional, fully-disclaimed deployment story that motivates the memory numbers lives in [`docs/case_study.md`](docs/case_study.md).
+---
+
+## Business Motivation: The 24 GB On-Premise Constraint
+
+Why does 4-bit activation and weight quantization matter for real-world enterprise deployments?
+
+Consider a hypothetical on-premise, air-gapped deployment scenario (such as confidential legal discovery, proprietary financial auditing, or sovereign document intelligence) operating under strict data governance where external cloud APIs are strictly prohibited:
+
+* **The Hardware Envelope:** Local workstation nodes are constrained by budget, power, and procurement to standard edge workstations equipped with a single 24 GB VRAM GPU (e.g., NVIDIA RTX 4090, A10G, or L4).
+* **The Memory Squeeze:** Running an open-weight 8-billion parameter model (e.g., LLaMA-3-8B) in FP16 requires **16 GB** simply to load weights into memory, leaving only **8 GB** for inference buffers. Ingesting long-context documents (8,192 to 16,384 tokens) across concurrent queries quickly pushes total memory past 30 GB, triggering Out-Of-Memory (OOM) crashes.
+* **The Quantization Trap:** Naive uniform 4-bit post-training quantization compresses weights and activations to fit comfortably within 12 GB VRAM. However, systematic activation outliers force the quantization step size to become excessively coarse, rounding 100% of normal background features to zero—corrupting critical details (such as contractual clauses or financial line items).
+* **The Rotational Solution:** Applying randomized orthogonal Hadamard rotations redistributes extreme channel energy evenly across all dimensions prior to quantization. This eliminates outlier saturation without altering the linear projection, allowing air-gapped systems to run reliable long-context 4-bit inference on commodity edge hardware.
+
+*(A detailed systems walkthrough with complete VRAM and KV-cache memory arithmetic is documented in [`docs/case_study.md`](docs/case_study.md).)*
 
 ---
 
@@ -273,8 +286,8 @@ Implementing and measuring randomized Hadamard rotations on Apple M4 silicon hel
 
 ## Disclaimers & Legal Notice
 
-* **Educational & Research Reproduction:** This repository is an independent open-source research and engineering reproduction. It is not affiliated with, sponsored by, or endorsed by ETH Zurich, Microsoft Research, Meta, or any medical entity.
-* **Fictional Scenario Disclaimer:** The case study describing "Apex Health Intelligence" is entirely fictional and was constructed strictly to illustrate systems-level GPU memory constraints, VRAM bottlenecks, and numerical quantization trade-offs. This software does not provide medical advice and is not intended, designed, or certified for clinical diagnosis, patient care, or health decision support.
+* **Educational & Research Reproduction:** This repository is an independent open-source research and engineering reproduction. It is not affiliated with, sponsored by, or endorsed by ETH Zurich, Microsoft Research, or Meta.
+* **Illustrative Scenario Disclaimer:** The deployment scenario in [`docs/case_study.md`](docs/case_study.md) is an illustrative systems case study constructed strictly to motivate on-premise GPU memory bottlenecks, VRAM constraints, and numerical quantization trade-offs.
 * **Trademark Attribution:** All product names, logos, and brands (including LLaMA, Mistral, NVIDIA, Apple, Mac mini) are property of their respective owners. Their mention in this repository is purely for technical identification and comparative benchmarking under fair use.
 * **License:** Distributed under the [MIT License](LICENSE). Standard limitation of liability applies.
 
