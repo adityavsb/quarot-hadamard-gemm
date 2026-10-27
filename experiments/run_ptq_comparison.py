@@ -223,7 +223,9 @@ def run_benchmark(
     # Human-readable report
     print("=" * 80)
     print("quarot-hadamard-gemm — synthetic PTQ comparison (fake quantisation, float32 matmul)")
-    print(f"device={device}  d={dim}  B={batch_size}  outlier_scale={outlier_scale}  outlier_channels={int(mask.sum())} ({outlier_ratio*100:.2f}%)  seed={seed}")
+    print(
+        f"device={device}  d={dim}  B={batch_size}  outlier_scale={outlier_scale}  outlier_channels={int(mask.sum())} ({outlier_ratio*100:.2f}%)  seed={seed}"
+    )
     print("=" * 80)
     print("\n[1] ACTIVATION DISTRIBUTION")
     print(f"{'metric':<28}{'unrotated':>14}{'rotated':>14}")
@@ -239,7 +241,9 @@ def run_benchmark(
     print(f"\n[3] LATENCY (median of {reps} after warm-up, ms)")
     for k, v in lat.items():
         print(f"{k:<30}{v['median_ms']:>10.2f}  (p10 {v['p10_ms']:.2f} / p90 {v['p90_ms']:.2f})")
-    print(f"FWHT overhead vs FP32 GEMM: {overhead_pct:.1f}%   |   FWHT vs dense rotation wall-clock: {fwht_vs_dense:.2f}x")
+    print(
+        f"FWHT overhead vs FP32 GEMM: {overhead_pct:.1f}%   |   FWHT vs dense rotation wall-clock: {fwht_vs_dense:.2f}x"
+    )
     print("=" * 80)
 
     if out_path is not None:

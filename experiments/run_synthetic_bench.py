@@ -53,7 +53,10 @@ def main() -> None:
                 torch.manual_seed(seed)
                 X = torch.randn(args.batch, args.dim)
                 mask = torch.zeros(args.dim, dtype=torch.bool)
-            W = torch.randn(args.dim, args.dim, generator=torch.Generator().manual_seed(10_000 + seed)) * (2.0 / args.dim) ** 0.5
+            W = (
+                torch.randn(args.dim, args.dim, generator=torch.Generator().manual_seed(10_000 + seed))
+                * (2.0 / args.dim) ** 0.5
+            )
             Y = X @ W.T
             signs = generate_random_signs(args.dim, seed=seed)
             Yn, Yr = fake_w4a4(X, W, None), fake_w4a4(X, W, signs)
@@ -85,6 +88,7 @@ def main() -> None:
         rf = [r["rot_frob"] for r in sub]
         nb = [r["naive_bg_err"] for r in sub if r["naive_bg_err"] is not None]
         rb = [r["rot_bg_err"] for r in sub if r["rot_bg_err"] is not None]
+
         def sd(v: list[float]) -> float:
             return statistics.stdev(v) if len(v) > 1 else 0.0
 

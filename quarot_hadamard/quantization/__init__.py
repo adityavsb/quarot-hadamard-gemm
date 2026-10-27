@@ -1,10 +1,10 @@
 """Quantization routines for symmetric uniform INT4 PTQ."""
 
 from .uniform_int4 import (
-    quantize_symmetric_int4,
+    Granularity,
     dequantize_symmetric_int4,
     fake_quantize_int4,
-    Granularity,
+    quantize_symmetric_int4,
 )
 
 __all__ = [

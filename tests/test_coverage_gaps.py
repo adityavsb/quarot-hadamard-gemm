@@ -16,7 +16,9 @@ from quarot_hadamard.rotations.fwht import rotated_vector
 from quarot_hadamard.rotations.hadamard import generate_random_signs
 
 
-@pytest.mark.parametrize("granularity", [Granularity.PER_TENSOR, Granularity.PER_TOKEN, Granularity.PER_CHANNEL, Granularity.GROUP_WISE])
+@pytest.mark.parametrize(
+    "granularity", [Granularity.PER_TENSOR, Granularity.PER_TOKEN, Granularity.PER_CHANNEL, Granularity.GROUP_WISE]
+)
 def test_quantize_dequantize_roundtrip_bounds(granularity):
     """Every granularity: ints in [-8, 7]; |x - x_hat| <= scale/2 element-wise (RTN bound)."""
     torch.manual_seed(0)
@@ -98,7 +100,9 @@ def test_rotated_linear_quantized_beats_naive_on_outliers():
     assert (y_rot - y_ref).norm() < (y_naive - y_ref).norm()
 
 
-@pytest.mark.skipif(not (hasattr(torch.backends, "mps") and torch.backends.mps.is_available()), reason="MPS not available")
+@pytest.mark.skipif(
+    not (hasattr(torch.backends, "mps") and torch.backends.mps.is_available()), reason="MPS not available"
+)
 def test_mps_path_signs_and_profile():
     signs = generate_random_signs(64, seed=42, device="mps")
     assert signs.device.type == "mps"
