@@ -22,6 +22,10 @@ def compute_outlier_profile(x: torch.Tensor) -> OutlierProfile:
         
     Returns:
         OutlierProfile dataclass containing statistical metrics.
+
+    Notes:
+        All statistics are computed over the flattened tensor (all tokens pooled), not per
+        token. PAR = max|x| / mean|x| over the pooled tensor; p99_ratio = max|x| / P99(|x|).
     """
     x_flat = x.flatten().to(torch.float64)
     abs_x = x_flat.abs()

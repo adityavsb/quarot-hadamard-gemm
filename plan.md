@@ -102,7 +102,7 @@ quarot-hadamard-gemm/
 * Support per-tensor, per-channel, and per-group ($G=128$) quantization granularities.
 * Build statistical profiler measuring:
   * Maximum absolute amplitude: $\|X\|_\infty$
-  * Peak-to-Average Ratio: $\text{PAR} = \frac{\|X\|_\infty}{\frac{1}{d} \sum |X_i|}$
+  * Peak-to-Average Ratio: $\text{PAR} = \frac{\|X\|_\infty}{\frac{1}{Bd} \sum_{b,i} |X_{b,i}|}$ (pooled over tokens)
   * Excess Kurtosis: $\kappa = \frac{\mathbb{E}[(X - \mu)^4]}{\sigma^4} - 3$
   * Signal-to-Quantization-Noise Ratio: $\text{SQNR} = 10 \log_{10} \frac{\|X\|_2^2}{\|X - \hat{X}\|_2^2}$
 
