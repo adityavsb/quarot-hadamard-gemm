@@ -38,10 +38,10 @@ Where:
 | :--- | :--- | :--- |
 | **Peak-to-Average Ratio (PAR)** | $> 25.0$ (severe outlier concentration) | $< 4.0$ (diffuse Gaussian-like distribution) |
 | **Excess Kurtosis** | $> 80.0$ (heavy-tailed) | $< 3.5$ (near-standard distribution) |
-| **Reconstruction Error (Frobenius)** | Relative error $> 0.25$ under INT4 | Relative error $< 0.05$ under INT4 |
-| **Signal-to-Quantization-Noise (SQNR)** | $< 12\text{ dB}$ | $> 24\text{ dB}$ ($+12\text{ dB}$ improvement) |
-| **Rotation Kernel Overhead** | Dense GEMM: $\mathcal{O}(d^2)$ ($> 15\%$ compute overhead) | Butterfly FWHT: $\mathcal{O}(d \log d)$ ($< 2\%$ latency overhead) |
-| **Memory Footprint** | $16\text{ GB}$ (FP16 baseline for 8B model) | $4.8\text{ GB}$ (W4A4 + 4-bit KV-cache, $70\%$ reduction) |
+| **Reconstruction Error (Frobenius)** | Relative error $> 0.25$ under INT4 | Relative error $< 0.25$ under INT4 (RTN floor ≈ 0.22) |
+| **Signal-to-Quantization-Noise (SQNR)** | $< 12\text{ dB}$ | $> 13\text{ dB}$ (RTN floor ≈ 13 dB); $> 24\text{ dB}$ requires clipping search or GPTQ (out of scope) |
+| **Rotation Kernel Overhead** | Dense GEMM: $\mathcal{O}(d^2)$ ($> 15\%$ compute overhead) | Butterfly FWHT: $\mathcal{O}(d \log d)$ (target $< 2\%$; **measured 58.3% on CPU, 89.8% on MPS in eager PyTorch — not met**) |
+| **Memory Footprint** | $16\text{ GB}$ (FP16 baseline for 8B model) | $4.8\text{ GB}$ (W4A4 + 4-bit KV-cache, $70\%$ reduction) — **not measured; no integer kernel in this repo** |
 
 ---
 
@@ -92,7 +92,7 @@ quarot-hadamard-gemm/
 * Implement recursive Sylvester construction for Hadamard matrices:
   $$\mathbf{H}_{2k} = \begin{pmatrix} \mathbf{H}_k & \mathbf{H}_k \\ \mathbf{H}_k & -\mathbf{H}_k \end{pmatrix}$$
 * Implement randomized sign diagonal $\mathbf{S} \in \{-1, +1\}^d$ to guarantee orthogonal mixing across all basis vectors.
-* Implement in-place / non-allocating Fast Walsh-Hadamard Transform (FWHT) exploiting power-of-two recursive butterfly additions/subtractions in $\mathcal{O}(d \log d)$.
+* Implement Fast Walsh-Hadamard Transform (FWHT) exploiting power-of-two recursive butterfly additions/subtractions in $\mathcal{O}(d \log d)$.
 * Implement block-diagonal padding/chunking for dimensions where $d \neq 2^k$ (e.g., $d = 4096$ vs $d = 2880$).
 * **Verification:** Unit tests verifying $\mathbf{H}^T \mathbf{H} = \mathbf{I}$, $\|\mathbf{H} \mathbf{x}\|_2 = \|\mathbf{x}\|_2$ (energy conservation), and $\text{FWHT}(\mathbf{x}) == \mathbf{H} \mathbf{x}$.
 

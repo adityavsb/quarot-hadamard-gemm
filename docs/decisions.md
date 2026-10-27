@@ -22,7 +22,8 @@ We choose **Randomized Walsh-Hadamard matrices evaluated via the Fast Walsh-Hada
 
 ### Rationale & Trade-offs
 * **Computational Complexity:** A dense Haar matrix requires $\mathcal{O}(d^2)$ floating-point operations ($d^2 = 16.7\text{M}$ for $d=4096$).
-* **Butterfly Efficiency:** FWHT computes the rotation in $\mathcal{O}(d \log_2 d)$ additions and subtractions without any floating-point multiplications ($49,152$ operations for $d=4096$). This reduces rotation arithmetic by **$341\times$**, keeping latency overhead below $2\%$.
+* **Butterfly Efficiency (arithmetic):** FWHT needs $d \log_2 d$ additions/subtractions and one scalar normalisation ($49{,}152$ + $4{,}096$ ops for $d=4096$) versus $16.8\text{M}$ multiply-adds for a dense rotation — $341\times$ fewer arithmetic operations.
+* **Measured wall-clock (this implementation, eager PyTorch):** the FWHT allocates three tensors per stage and is memory-bound. On Apple M4, rotating a $128 \times 4096$ activation costs $2.43\text{ ms}$ against a $4.17\text{ ms}$ float32 GEMM ($58.3\%$ overhead on CPU; $89.8\%$ overhead on MPS) and is $1.81\times$ faster than a dense `X @ H` on CPU ($1.06\times$ on MPS). The $<2\%$ overhead reported by QuaRot requires a fused CUDA/Metal kernel; it is **not** achieved here and is recorded as an open item.
 * **Equal Outlier Diffusion:** Because Hadamard matrices consist of elements with uniform absolute magnitude $|H_{ij}| = 1/\sqrt{d}$, multiplying by $\mathbf{H}$ uniformly distributes energy across all coordinates. Combining with a random diagonal sign matrix $\mathbf{S} = \text{diag}(\pm 1)$ breaks symmetry and prevents worst-case alignment with coordinate-aligned outliers.
 
 ---

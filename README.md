@@ -5,67 +5,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![ci](https://github.com/adityavsb/quarot-hadamard-gemm/actions/workflows/ci.yml/badge.svg)](https://github.com/adityavsb/quarot-hadamard-gemm/actions/workflows/ci.yml)
 
-An empirical systems research harness and prototype implementation evaluating **randomized orthogonal Hadamard rotations** (following *QuaRot*; *SpinQuant*'s learned rotations are related work, not implemented here) to eliminate activation outliers prior to 4-bit post-training quantization (PTQ) of weights, activations (W4A4), and KV-caches.
+An empirical systems research harness and prototype implementation evaluating **randomized orthogonal Hadamard rotations** (following *QuaRot*; *SpinQuant*'s learned rotations are related work, not implemented here) to eliminate activation outliers prior to 4-bit post-training quantization (PTQ) of weights and activations (W4A4). Quantisation is simulated ("fake quantisation": quantise → dequantise → float32 matmul); there is no integer GEMM, no bit-packing and no KV-cache code in this repository.
 
 ---
 
-## Fictional Enterprise Case Study: Apex Health Intelligence
+## Why rotate before quantising (2-minute version)
 
-### 1. The Operational Context & Regulatory Envelope
-**Apex Health Intelligence** operates an on-premise clinical copilot deployed across 14 hospital networks. The system ingests electronic health records (EHR), multi-page pathology narratives, and lab panels to generate real-time clinical discharge summaries and differential diagnosis suggestions during physician rounds.
+A handful of hidden-state channels in large transformers carry values one to two orders of magnitude above the rest [3]. Symmetric INT4 sets its step from the largest value, so those channels dictate a step that rounds the bulk to zero. Multiplying by an orthogonal matrix on both sides of a linear layer leaves the output unchanged but spreads each channel's energy across all coordinates; a randomised Walsh–Hadamard matrix does this in $d\log_2 d$ additions. This repository measures how much that helps a round-to-nearest W4A4 quantiser on synthetic activations.
 
-Due to strict HIPAA patient privacy mandates, hospital air-gap policies, and sovereign data governance laws, **zero patient data may leave hospital premises**. External multi-tenant cloud APIs (OpenAI, Anthropic) are strictly prohibited. The system must run on hospital-owned, on-premise compute nodes deployed inside local server closets.
-
-### 2. The Production Bottleneck: Memory & Concurrency Limits
-Hospital server closets are constrained by space, power, and procurement budgets to standard edge workstations equipped with **single 24GB VRAM GPUs** (e.g., NVIDIA RTX 4090 / A10G / L4).
-
-When running an open-weights 8-billion parameter foundation model (such as LLaMA-3-8B or Mistral-7B) in standard 16-bit floating point (FP16 / BF16):
-* **Model Static Footprint:** $8.03 \times 10^9 \times 2\text{ bytes} \approx \mathbf{16.06\text{ GB}}$ VRAM just to load weights into memory.
-* **Remaining VRAM for Inference Buffers:** $24.0\text{ GB} - 16.06\text{ GB} = \mathbf{7.94\text{ GB}}$.
-* **The Long-Context KV-Cache Crisis:** Clinical summaries frequently involve historical chart ingestion spanning 8,192 to 16,384 tokens. For an 8B model (32 layers, 32 KV heads, head dimension 128), the KV-cache memory requirement scales linearly with context length $L$ and batch size $B$:
-  $$\text{KV-Cache (bytes)} = 2 \times B \times L \times N_{\text{layers}} \times D_{\text{model}} \times \text{bytes per element}$$
-  At batch size $B=4$ and context length $L=8,192$, the FP16 KV-cache requires:
-  $$2 \times 4 \times 8192 \times 32 \times 4096 \times 2 \approx \mathbf{17.18\text{ GB}}$$
-* **The Consequence:** Total memory required is $16.06\text{ GB} + 17.18\text{ GB} = \mathbf{33.24\text{ GB}} \gg 24\text{ GB}$. The system suffers Out-Of-Memory (OOM) crashes, forcing the hospital to throttle concurrency to a single stream ($B=1$). Doctors experience queuing delays exceeding 90 seconds per patient record, violating the clinical 15-second SLA.
-
-### 3. The Failed Attempt: Standard INT4 Post-Training Quantization
-To compress both weights and the KV-cache into the 24GB envelope, engineering applied standard uniform 4-bit post-training quantization (PTQ):
-* **Weight Quantization (W4):** Compressed weights to $\sim 4.2\text{ GB}$.
-* **Activation & KV-Cache Quantization (A4 & KV4):** Compressed KV-cache to $4.3\text{ GB}$, theoretically allowing $B=4$ concurrency within $12.5\text{ GB}$ total VRAM.
-
-**The Catastrophic Failure Mode:**
-Modern transformer architectures naturally develop **systematic activation outliers** in deep residual layers. Approximately $0.1\%$ of hidden-state channels exhibit peak amplitudes one to two orders of magnitude above the bulk (Dettmers et al. [3] report values up to ≈60 at 6.7B+ parameters), while $99.9\%$ of channel features stay tightly clustered within $[-1.5, +1.5]$:
-
-$$\Delta = \frac{\max(|X|)}{2^{b-1} - 1} = \frac{60}{7} \approx 8.57$$
-
-Under this quantization step size ($\Delta = 8.57$), every normal feature value between $-4.3$ and $+4.3$ rounds to **zero**. Fine-grained diagnostic signals (such as medication dosages and micro-differential symptoms) are completely erased.
-
-* **Clinical Outcome:** Clinical extraction accuracy collapsed from $94.2\%$ to $21.4\%$. The quantized model output repetitive medical gibberish and hallucinated drug interactions.
-
----
-
-### 4. The Engineering Solution: Randomized Orthogonal Matrix Rotations
-Instead of undertaking an unsustainable multi-million dollar hardware upgrade to multi-GPU clusters, this project implements **randomized Fast Walsh-Hadamard Transform (FWHT) rotations** (QuaRot methodology):
-
-```
-Standard PTQ (Outliers destroy precision):
-[X: Outliers up to ±60] ──> [Uniform INT4 Quantizer] ──> [Values < |4.3| round to 0] (Collapse)
-
-Outlier-Free Rotated PTQ (Energy dispersed):
-[X: Outliers up to ±60] ──> [FWHT Rotation: H @ X] ──> [X_rot: Max peak < ±9.2] ──> [INT4 Quantizer] ──> [Clean Reconstruction]
-```
-
-1. **Orthogonal Invariance:** By inserting orthogonal Hadamard matrices $\mathbf{H} \in \mathbb{R}^{d \times d}$ ($\mathbf{H}^T \mathbf{H} = \mathbf{I}$) between weights $\mathbf{W}$ and activations $\mathbf{X}$:
-   $$\mathbf{Y} = \mathbf{W} \mathbf{X} = (\mathbf{W} \mathbf{H}^T) (\mathbf{H} \mathbf{X}) = \tilde{\mathbf{W}} \tilde{\mathbf{X}}$$
-   * $\tilde{\mathbf{W}} = \mathbf{W} \mathbf{H}^T$ is computed once offline and quantized to INT4.
-   * $\tilde{\mathbf{X}} = \mathbf{H} \mathbf{X}$ is computed on-the-fly during inference.
-2. **Energy dispersion:** The randomised Hadamard transform spreads each coordinate's energy evenly over all $d$ coordinates. The energy of outlier channels is distributed uniformly across all $d$ dimensions.
-   * Peak activation amplitude drops from $85.0$ to $< 9.2$ ($9.2\times$ reduction).
-   * Peak-to-Average Ratio (PAR) drops from $28.4$ to $3.1$.
-   * Excess kurtosis drops from $112.5$ to $3.2$ (approaching Gaussian behavior).
-3. **Zero Dense GEMM Overhead via Butterfly FWHT:** Using the Fast Walsh-Hadamard Transform, $\mathbf{H} \mathbf{X}$ is computed in $\mathcal{O}(d \log d)$ butterfly additions/subtractions instead of a dense $\mathcal{O}(d^2)$ matrix multiplication.
-   * Transform runtime overhead is under **$1.8\%$** of token generation latency.
-   * Total model + KV-cache footprint drops from $33.2\text{ GB}$ to **$9.6\text{ GB}$**, comfortably supporting $B=4$ clinical concurrency on a single 24GB workstation with zero clinical accuracy loss.
+A fictional, fully-disclaimed deployment story that motivates the memory numbers lives in [`docs/case_study.md`](docs/case_study.md).
 
 ---
 
@@ -107,9 +55,11 @@ For a hidden dimension of $d = 4096$:
 
 ---
 
-## Empirical Results & Hardware Telemetry (Apple M4)
+## Measured results (synthetic activations, Apple M4, CPU and MPS)
 
-Benchmarked directly on an Apple M4 Mac mini ($d=4096$, $B=128$, synthetic outlier injection with scale $80.0$ on $0.2\%$ of channels). Raw JSON telemetry is committed under [`results/apple_m4_benchmark_2026-10-25.json`](results/apple_m4_benchmark_2026-10-25.json):
+Benchmarked directly on an Apple M4 Mac mini ($d=4096$, $B=128$, synthetic outlier injection with scale $80.0$ on $0.2\%$ of channels). Raw JSON telemetry written by `experiments/run_ptq_comparison.py --out`:
+* CPU: [`results/apple_m4_cpu_2026-10-27.json`](results/apple_m4_cpu_2026-10-27.json)
+* MPS: [`results/apple_m4_mps_2026-10-27.json`](results/apple_m4_mps_2026-10-27.json)
 
 ### 1. Activation Outlier Suppression Profile
 | Metric | Unrotated Activations | Rotated Activations (QuaRot) | Suppression Delta |
@@ -126,11 +76,44 @@ Benchmarked directly on an Apple M4 Mac mini ($d=4096$, $B=128$, synthetic outli
 | **Signal-to-Noise Ratio (SQNR)** | $10.11\text{ dB}$ | **$13.72\text{ dB}$** | **$+3.61\text{ dB}$ gain** |
 | **Max Absolute Point Error** | $7.9663$ | **$5.4134$** | **$1.47\times$ tighter bound** |
 | **Mean Squared Error (MSE)** | $2.702397$ | **$1.176803$** | **$2.30\times$ lower MSE** |
+| **Background-channel rel. error** (error of the 4 088 non-outlier channels' contribution to Y) | $1.1619$ | **$0.7667$** | — |
+| **Outlier channels' share of $\|Y\|_F^2$** | $0.928$ | $0.928$ | explains why the Frobenius rows move less than the narrative suggests |
 
-### 3. Latency & Kernel Overhead
-* **FP32 GEMM Baseline:** $5.89\text{ ms}$
-* **FWHT Vectorized Rotation Alone:** **$2.11\text{ ms}$** ($\mathcal{O}(d \log d)$ butterfly transform)
-* **Rotated INT4 Total Pipeline:** $5.82\text{ ms}$ (Matches unquantized runtime while slashing memory bandwidth by $4\times$)
+Naive per-token INT4 quantises 100 % of background-channel entries to zero at this outlier scale; relative Frobenius error still reads 0.31 because 93 % of the output energy comes from the 8 outlier channels. Use the background-channel row to judge information loss.
+
+### 3. Latency & Kernel Overhead (Apple M4, 50 repetitions after warm-up)
+* **FP32 GEMM Baseline:** $4.17\text{ ms}$ (CPU) / $1.73\text{ ms}$ (MPS)
+* **FWHT Vectorized Rotation Alone:** **$2.43\text{ ms}$** (CPU, $58.3\%$ overhead vs GEMM) / **$1.55\text{ ms}$** (MPS, $89.8\%$ overhead vs GEMM)
+* **Dense Rotation Reference `X @ H`:** $4.40\text{ ms}$ (CPU) / $1.64\text{ ms}$ (MPS)
+* **Naive fake-INT4 forward:** $3.68\text{ ms}$ (CPU) / $2.08\text{ ms}$ (MPS)
+* **Rotated fake-INT4 forward:** $5.67\text{ ms}$ (CPU) / $3.35\text{ ms}$ (MPS) — this is a float32 matmul on dequantised operands; it demonstrates numerical behaviour, not bandwidth or throughput.
+
+### 4. Sensitivity to outlier scale (10 seeds each)
+
+| Injected Outlier Scale | Naive Rel. Frobenius | Rotated Rel. Frobenius | Naive / Rotated Error Ratio | Naive Background Error | Rotated Background Error |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| 0.0 | 0.2240 ± 0.0010 | 0.2237 ± 0.0006 | 1.00× | — | — |
+| 5.0 | 0.2832 ± 0.0007 | 0.2237 ± 0.0009 | 1.27× | 0.290 | 0.229 |
+| 10.0 | 0.4680 ± 0.0014 | 0.2237 ± 0.0011 | 2.09× | 0.512 | 0.245 |
+| 20.0 | 0.6569 ± 0.0039 | 0.2218 ± 0.0017 | 2.96× | 0.880 | 0.297 |
+| 40.0 | 0.5094 ± 0.0048 | 0.2161 ± 0.0024 | 2.36× | 1.040 | 0.441 |
+| 80.0 | 0.3128 ± 0.0033 | 0.2092 ± 0.0024 | 1.50× | 1.157 | 0.774 |
+| 160.0 | 0.2135 ± 0.0023 | 0.2039 ± 0.0025 | 1.05× | 1.536 | 1.466 |
+
+The naive/rotated gap is not monotone in outlier scale: it peaks near scale 20 and vanishes by 160 because the outlier channels dominate the Frobenius norm. The background-channel columns are the informative ones.
+
+---
+
+## Targets vs. results
+
+| Objective (plan.md §2) | Target | Measured | Status |
+| :--- | :---: | :---: | :--- |
+| Peak-to-Average Ratio after rotation | < 4.0 | 4.81 | not met (−) |
+| Excess kurtosis after rotation | < 3.5 | −0.20 | met |
+| Relative Frobenius error, rotated W4A4 | < 0.05 | 0.206 | **not met.** RTN INT4 with per-token max scaling has a no-outlier floor of 0.224 / 13.0 dB on Gaussian inputs; the target was unattainable for this quantiser. Rotation reaches the floor, i.e. removes the outlier penalty entirely. |
+| SQNR, rotated W4A4 | > 24 dB | 13.72 dB | **not met** (same reason) |
+| FWHT overhead vs. GEMM | < 2 % | 58.3% (CPU) / 89.8% (MPS) | **not met.** Eager-PyTorch FWHT is memory-bound (ADR-001, revised) |
+| Memory footprint | 4.8 GB | not measured | fake quantisation moves float32 bytes; no footprint claim is made |
 
 ---
 
@@ -166,9 +149,12 @@ quarot-hadamard-gemm/
 ├── tests/
 │   ├── test_fwht.py                   # Verifies FWHT against dense matrix multiplication
 │   ├── test_orthogonality.py          # Verifies isometry and H.T @ H = I
-│   └── test_quantization.py           # Validates INT4 accuracy recovery on heavy-tailed tensors
+│   ├── test_quantization.py           # Validates INT4 accuracy recovery on heavy-tailed tensors
+│   └── test_coverage_gaps.py          # Validates granularities, block paths, and MPS smoke
 └── results/
-    └── apple_m4_benchmark_2026-10-25.json # Raw machine telemetry from physical silicon
+    ├── apple_m4_cpu_2026-10-27.json   # JSON written by experiments/run_ptq_comparison.py --out (CPU)
+    ├── apple_m4_mps_2026-10-27.json   # JSON written by experiments/run_ptq_comparison.py --out (MPS)
+    └── synthetic_sweep.csv            # CSV written by experiments/run_synthetic_bench.py
 ```
 
 ---
@@ -200,11 +186,12 @@ python experiments/run_ptq_comparison.py --dim 4096 --batch 128 --outlier-scale 
 
 ## Hardware Friction & Engineering Limitations
 
-In authentic systems engineering, mathematical elegance frequently meets physical hardware bottlenecks:
+Three things that did not work as the asymptotics suggest:
 
-1. **Non-Power-of-Two Dimensions:** Standard Fast Walsh-Hadamard transforms strictly require $d = 2^k$. While LLM hidden dimensions are typically powers of two ($4096, 8192$), intermediate MLP feed-forward dimensions often are not (e.g., LLaMA-3 intermediate dimension $d_{\text{ffn}} = 14,336 = 7 \times 2048$). To rotate non-power-of-two layers without memory bloat, we implement a **block-diagonal Hadamard decomposition** splitting $d$ into power-of-two sub-blocks (see [ADR-003](docs/decisions.md#adr-003-handling-non-power-of-two-dimensions)).
-2. **SIMD Vectorization & Strided Memory Overhead:** While FWHT is asymptotically $\mathcal{O}(d \log d)$, naïve recursive implementations suffer from poor cache stride locality at the final butterfly stages (stride $d/2$). Our vectorized tensor reshape formulation operates across contiguous memory blocks, preventing L1/L2 cache evictions on Apple Silicon (M4) unified memory.
-3. **Weight Storage Transformation:** Rotating weight matrices $\tilde{\mathbf{W}} = \mathbf{W} \mathbf{H}^T$ changes weight distributions. While activation kurtosis drops significantly, weight kurtosis increases slightly ($\sim +1.2$). However, weights can tolerate fine-grained channel/group scales, whereas online activations require uniform scale factors for fast integer GEMM.
+1. **FWHT is not free in eager PyTorch.** The butterfly allocates three tensors per stage; measured on Apple M4, it costs $58.3\%$ of the GEMM on CPU ($89.8\%$ on MPS) and is only $1.81\times$ faster than a dense rotation on CPU ($1.06\times$ on MPS). A fused kernel (as in QuaRot's CUDA implementation) is required for the $<2\%$ overhead reported there.
+2. **Non-Power-of-Two Dimensions:** Standard Fast Walsh-Hadamard transforms strictly require $d = 2^k$. While LLM hidden dimensions are typically powers of two ($4096, 8192$), intermediate MLP feed-forward dimensions often are not (e.g., LLaMA-3 intermediate dimension $d_{\text{ffn}} = 14,336 = 7 \times 2048$). To rotate non-power-of-two layers without memory bloat, we implement a **block-diagonal Hadamard decomposition** splitting $d$ into power-of-two sub-blocks (see [ADR-003](docs/decisions.md#adr-003-handling-non-power-of-two-dimensions)).
+3. **SIMD Vectorization & Strided Memory Overhead:** While FWHT is asymptotically $\mathcal{O}(d \log d)$, naïve recursive implementations suffer from poor cache stride locality at the final butterfly stages (stride $d/2$). Our vectorized tensor reshape formulation operates across contiguous memory blocks, which keeps each stage a contiguous pass; it does not avoid the $3 \log_2 d$ extra tensor passes (see item 1).
+4. **Weight Storage Transformation:** Rotating weight matrices $\tilde{\mathbf{W}} = \mathbf{W} \mathbf{H}^T$ changes weight distributions. While activation kurtosis drops significantly, weight kurtosis is essentially unchanged for Gaussian weights (measured −0.001 → +0.003); for real LLM weights this should be re-measured. However, weights can tolerate fine-grained channel/group scales, whereas online activations require uniform scale factors for fast integer GEMM.
 
 ---
 
