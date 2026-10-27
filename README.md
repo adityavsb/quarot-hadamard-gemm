@@ -1,7 +1,7 @@
 # Outlier-Free Matrix Rotations for 4-Bit LLM Quantization (`quarot-hadamard-gemm`)
 ### Eliminating Activation Outliers in Post-Training Quantization via Fast Walsh-Hadamard Transforms (FWHT)
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
@@ -96,8 +96,7 @@ Computing $\mathbf{H}_d \mathbf{x}$ directly via matrix-vector multiplication re
 
 $$\mathbf{y}^{(k)}_i = \mathbf{y}^{(k-1)}_i + \mathbf{y}^{(k-1)}_{i + 2^{k-1}}, \quad \mathbf{y}^{(k)}_{i + 2^{k-1}} = \mathbf{y}^{(k-1)}_i - \mathbf{y}^{(k-1)}_{i + 2^{k-1}}$$
 
-Total arithmetic complexity is reduced to:
-$$\text{FLOPs} = d \log_2(d) \text{ additions / subtractions (zero scalar multiplications)}$$
+$$\text{ops} = d \log_2 d \text{ additions/subtractions} + d \text{ multiplications (normalisation)}$$
 
 For a hidden dimension of $d = 4096$:
 * Dense Matrix Multiplication: $4096^2 = \mathbf{16,777,216\text{ operations}}$

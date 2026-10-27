@@ -7,7 +7,7 @@ import torch
 
 class Granularity(Enum):
     PER_TENSOR = "per_tensor"
-    PER_CHANNEL = "per_channel"   # Per-channel for weights (dim 0) or per-token for activations (dim -2)
+    PER_CHANNEL = "per_channel"   # One scale per index of dim 0 (output channel for (out, in) weights)
     PER_TOKEN = "per_token"       # Last-dimension normalization (dim -1)
     GROUP_WISE = "group_wise"     # Block-wise groups (e.g. group_size=128)
 
