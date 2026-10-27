@@ -34,3 +34,11 @@ htmlcov/
 
 # macOS
 .DS_Store
+
+# Environment & Secrets
+.env
+.env.*
+*.pem
+*.key
+*.token
+
