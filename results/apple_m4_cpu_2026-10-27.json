@@ -1,0 +1,100 @@
+{
+  "benchmark": "quarot-hadamard-gemm",
+  "timestamp": "2026-10-27T17:32:20+0100",
+  "system": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "python_version": "3.13.6",
+    "torch_version": "2.14.1",
+    "torch_num_threads": 4,
+    "device_used": "cpu",
+    "mps_available": true,
+    "cuda_available": false,
+    "chip": "Apple M4",
+    "model": "Mac16,10",
+    "memory_bytes": "17179869184",
+    "perf_cores": "4",
+    "eff_cores": "6"
+  },
+  "parameters": {
+    "dimension_d": 4096,
+    "batch_size": 128,
+    "outlier_scale": 80.0,
+    "outlier_channel_ratio": 0.002,
+    "outlier_channels": 8,
+    "seed": 42,
+    "quantization": "symmetric RTN INT4, per-token activations / per-channel weights, FAKE quantisation (float32 matmul)"
+  },
+  "activation_distribution": {
+    "unrotated": {
+      "max_abs": 95.92204284667969,
+      "mean_abs": 0.9542938532966073,
+      "std": 3.70734875104403,
+      "par": 100.51625347403954,
+      "kurtosis": 459.67815811564975,
+      "p99_ratio": 36.170943488831796
+    },
+    "rotated": {
+      "max_abs": 14.336380004882812,
+      "mean_abs": 2.981148139182608,
+      "std": 3.707348800062995,
+      "par": 4.809012949223537,
+      "kurtosis": -0.20392860543422797,
+      "p99_ratio": 1.5565666514544507
+    },
+    "outlier_channel_energy_share_of_X": 0.9271
+  },
+  "reconstruction_fidelity": {
+    "naive_int4": {
+      "frobenius_error": 0.3122875331877381,
+      "max_error": 7.9663238525390625,
+      "mean_squared_error": 2.7023965598753223,
+      "sqnr_db": 10.108907222747803,
+      "background_channel_rel_error": 1.1618658788195395
+    },
+    "rotated_int4": {
+      "frobenius_error": 0.2060781874793325,
+      "max_error": 5.413440704345703,
+      "mean_squared_error": 1.1768031900565077,
+      "sqnr_db": 13.719359636306763,
+      "background_channel_rel_error": 0.766713965429985
+    },
+    "naive_fraction_of_background_entries_quantised_to_zero": 1.0
+  },
+  "latency_ms": {
+    "fp32_gemm": {
+      "median_ms": 4.169,
+      "p10_ms": 3.952,
+      "p90_ms": 4.371,
+      "reps": 50
+    },
+    "fwht_rotation_only": {
+      "median_ms": 2.429,
+      "p10_ms": 1.783,
+      "p90_ms": 2.673,
+      "reps": 50
+    },
+    "dense_rotation_only": {
+      "median_ms": 4.399,
+      "p10_ms": 4.341,
+      "p90_ms": 4.633,
+      "reps": 50
+    },
+    "naive_fake_int4_forward": {
+      "median_ms": 3.68,
+      "p10_ms": 3.639,
+      "p90_ms": 3.724,
+      "reps": 50
+    },
+    "rotated_fake_int4_forward": {
+      "median_ms": 5.672,
+      "p10_ms": 5.472,
+      "p90_ms": 6.617,
+      "reps": 50
+    }
+  },
+  "derived": {
+    "fwht_overhead_pct_of_fp32_gemm": 58.3,
+    "fwht_speedup_vs_dense_rotation_wallclock": 1.81
+  }
+}
