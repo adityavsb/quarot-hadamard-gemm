@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-An empirical systems research harness and prototype implementation evaluating **randomized orthogonal Hadamard rotations** (based on *QuaRot* and *SpinQuant* methodologies) to eliminate activation outliers prior to 4-bit post-training quantization (PTQ) of weights, activations (W4A4), and KV-caches.
+An empirical systems research harness and prototype implementation evaluating **randomized orthogonal Hadamard rotations** (following *QuaRot*; *SpinQuant*'s learned rotations are related work, not implemented here) to eliminate activation outliers prior to 4-bit post-training quantization (PTQ) of weights, activations (W4A4), and KV-caches.
 
 ---
 
@@ -34,11 +34,11 @@ To compress both weights and the KV-cache into the 24GB envelope, engineering ap
 * **Activation & KV-Cache Quantization (A4 & KV4):** Compressed KV-cache to $4.3\text{ GB}$, theoretically allowing $B=4$ concurrency within $12.5\text{ GB}$ total VRAM.
 
 **The Catastrophic Failure Mode:**
-Modern transformer architectures naturally develop **systematic activation outliers** in deep residual layers. Approximately $0.1\%$ of hidden-state channels exhibit peak amplitudes exceeding $\pm 85.0$, while $99.9\%$ of channel features stay tightly clustered within $[-1.5, +1.5]$:
+Modern transformer architectures naturally develop **systematic activation outliers** in deep residual layers. Approximately $0.1\%$ of hidden-state channels exhibit peak amplitudes one to two orders of magnitude above the bulk (Dettmers et al. [3] report values up to ≈60 at 6.7B+ parameters), while $99.9\%$ of channel features stay tightly clustered within $[-1.5, +1.5]$:
 
-$$\Delta = \frac{\max(|X|)}{2^{b-1} - 1} = \frac{85.0}{7} \approx 12.14$$
+$$\Delta = \frac{\max(|X|)}{2^{b-1} - 1} = \frac{60}{7} \approx 8.57$$
 
-Under this quantization step size ($\Delta = 12.14$), every normal feature value between $-6.0$ and $+6.0$ rounds to **zero**. Fine-grained diagnostic signals (such as medication dosages and micro-differential symptoms) are completely erased.
+Under this quantization step size ($\Delta = 8.57$), every normal feature value between $-4.3$ and $+4.3$ rounds to **zero**. Fine-grained diagnostic signals (such as medication dosages and micro-differential symptoms) are completely erased.
 
 * **Clinical Outcome:** Clinical extraction accuracy collapsed from $94.2\%$ to $21.4\%$. The quantized model output repetitive medical gibberish and hallucinated drug interactions.
 
@@ -49,17 +49,17 @@ Instead of undertaking an unsustainable multi-million dollar hardware upgrade to
 
 ```
 Standard PTQ (Outliers destroy precision):
-[X: Outliers up to ±85] ──> [Uniform INT4 Quantizer] ──> [Values < |6.0| round to 0] (Collapse)
+[X: Outliers up to ±60] ──> [Uniform INT4 Quantizer] ──> [Values < |4.3| round to 0] (Collapse)
 
 Outlier-Free Rotated PTQ (Energy dispersed):
-[X: Outliers up to ±85] ──> [FWHT Rotation: H @ X] ──> [X_rot: Max peak < ±9.2] ──> [INT4 Quantizer] ──> [Clean Reconstruction]
+[X: Outliers up to ±60] ──> [FWHT Rotation: H @ X] ──> [X_rot: Max peak < ±9.2] ──> [INT4 Quantizer] ──> [Clean Reconstruction]
 ```
 
 1. **Orthogonal Invariance:** By inserting orthogonal Hadamard matrices $\mathbf{H} \in \mathbb{R}^{d \times d}$ ($\mathbf{H}^T \mathbf{H} = \mathbf{I}$) between weights $\mathbf{W}$ and activations $\mathbf{X}$:
    $$\mathbf{Y} = \mathbf{W} \mathbf{X} = (\mathbf{W} \mathbf{H}^T) (\mathbf{H} \mathbf{X}) = \tilde{\mathbf{W}} \tilde{\mathbf{X}}$$
    * $\tilde{\mathbf{W}} = \mathbf{W} \mathbf{H}^T$ is computed once offline and quantized to INT4.
    * $\tilde{\mathbf{X}} = \mathbf{H} \mathbf{X}$ is computed on-the-fly during inference.
-2. **Spectral Energy Dispersion:** The randomized Hadamard transform acts as a spatial diffuser. The concentrated kinetic energy of outlier channels is distributed uniformly across all $d$ dimensions.
+2. **Energy dispersion:** The randomised Hadamard transform spreads each coordinate's energy evenly over all $d$ coordinates. The energy of outlier channels is distributed uniformly across all $d$ dimensions.
    * Peak activation amplitude drops from $85.0$ to $< 9.2$ ($9.2\times$ reduction).
    * Peak-to-Average Ratio (PAR) drops from $28.4$ to $3.1$.
    * Excess kurtosis drops from $112.5$ to $3.2$ (approaching Gaussian behavior).

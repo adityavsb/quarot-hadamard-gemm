@@ -2,7 +2,7 @@
 
 ## Benchmarking Randomized Fast Walsh-Hadamard Rotations for Lossless W4A4 GEMM and KV-Cache Compression
 
-An empirical systems research harness and prototype implementation replicating and benchmarking **randomized orthogonal Hadamard rotations** (based on the *QuaRot* and *SpinQuant* methodologies) to eliminate activation outliers prior to 4-bit post-training quantization (PTQ).
+An empirical systems research harness and prototype implementation replicating and benchmarking **randomized orthogonal Hadamard rotations** (following *QuaRot*; *SpinQuant*'s learned rotations are related work, not implemented here) to eliminate activation outliers prior to 4-bit post-training quantization (PTQ).
 
 ---
 
