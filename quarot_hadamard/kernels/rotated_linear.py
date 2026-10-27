@@ -1,27 +1,26 @@
 """RotatedLinear Layer: Linear projection with online Fast Walsh-Hadamard activation rotation."""
 
-from typing import Optional
 import torch
 import torch.nn as nn
 
+from ..quantization.uniform_int4 import (
+    Granularity,
+    dequantize_symmetric_int4,
+    quantize_symmetric_int4,
+)
 from ..rotations.fwht import rotated_vector
 from ..rotations.hadamard import generate_random_signs
-from ..quantization.uniform_int4 import (
-    quantize_symmetric_int4,
-    dequantize_symmetric_int4,
-    Granularity,
-)
 
 
 class RotatedLinear(nn.Module):
     """Linear layer applying randomized Hadamard rotations to eliminate activation outliers prior to INT4 quantization.
-    
+
     Mathematical equivalence:
         Y = X W^T = (X H_rand^T) (W H_rand^T)^T = X_rot W_rot^T
-        
+
     Offline:
         W_rot = FWHT(W * signs) is pre-computed and quantized to INT4.
-        
+
     Online forward:
         X_rot = FWHT(X * signs) is computed on-the-fly in O(d log d).
         X_rot is quantized to INT4 and GEMM is executed.
@@ -32,9 +31,9 @@ class RotatedLinear(nn.Module):
         in_features: int,
         out_features: int,
         bias: bool = False,
-        seed: Optional[int] = 42,
-        block_size: Optional[int] = None,
-        device: Optional[torch.device] = None,
+        seed: int | None = 42,
+        block_size: int | None = None,
+        device: torch.device | None = None,
         dtype: torch.dtype = torch.float32,
     ):
         super().__init__()
@@ -76,7 +75,7 @@ class RotatedLinear(nn.Module):
 
     def forward(self, x: torch.Tensor, quantize: bool = True) -> torch.Tensor:
         """Forward pass.
-        
+
         Args:
             x: Input activations of shape (..., in_features).
             quantize: If True, simulate W4A4 quantized inference.

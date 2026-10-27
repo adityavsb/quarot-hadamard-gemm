@@ -1,15 +1,15 @@
 """Symmetric Uniform INT4 Quantizer for weights, activations, and KV-cache."""
 
 from enum import Enum
-from typing import Tuple
+
 import torch
 
 
 class Granularity(Enum):
     PER_TENSOR = "per_tensor"
-    PER_CHANNEL = "per_channel"   # Per-channel for weights (dim 0) or per-token for activations (dim -2)
-    PER_TOKEN = "per_token"       # Last-dimension normalization (dim -1)
-    GROUP_WISE = "group_wise"     # Block-wise groups (e.g. group_size=128)
+    PER_CHANNEL = "per_channel"  # One scale per index of dim 0 (output channel for (out, in) weights)
+    PER_TOKEN = "per_token"  # Last-dimension normalization (dim -1)
+    GROUP_WISE = "group_wise"  # Block-wise groups (e.g. group_size=128)
 
 
 def quantize_symmetric_int4(
@@ -19,13 +19,13 @@ def quantize_symmetric_int4(
     qmin: int = -8,
     qmax: int = 7,
     eps: float = 1e-8,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """Quantize floating-point tensor x to signed 4-bit integers [-8, 7].
-    
+
     Formula:
         scale = max(|x|) / qmax
         q = clip(round(x / scale), qmin, qmax)
-        
+
     Args:
         x: Input floating-point tensor.
         granularity: Granularity mode (PER_TENSOR, PER_CHANNEL, PER_TOKEN, GROUP_WISE).
@@ -33,12 +33,12 @@ def quantize_symmetric_int4(
         qmin: Minimum quantized integer (default: -8).
         qmax: Maximum quantized integer (default: 7).
         eps: Minimum scale to avoid division by zero.
-        
+
     Returns:
         Tuple of (q_int4, scale).
     """
     orig_shape = x.shape
-    
+
     if granularity == Granularity.PER_TENSOR:
         max_val = x.abs().max()
         scale = torch.clamp(max_val / float(qmax), min=eps)
@@ -62,7 +62,7 @@ def quantize_symmetric_int4(
         return q.view(orig_shape).to(torch.int8), scale
     else:
         raise ValueError(f"Unsupported granularity: {granularity}")
-        
+
     q = torch.clamp(torch.round(x / scale), qmin, qmax).to(torch.int8)
     return q, scale
 

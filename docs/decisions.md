@@ -1,6 +1,6 @@
 # Architecture Decision Records (ADRs)
 
-This document captures the key design choices, theoretical trade-offs, and empirical justifications made in `quarot-hadamard-gemm`.
+This document captures the key design choices, theoretical trade-offs, and design justifications made in `quarot-hadamard-gemm`.
 
 ---
 
@@ -8,7 +8,7 @@ This document captures the key design choices, theoretical trade-offs, and empir
 
 * **Status:** Accepted
 * **Date:** 2026-10-25
-* **Deciders:** Systems Engineering
+* **Decider:** Aditya Bhadoria
 
 ### Context
 To eliminate activation outliers prior to 4-bit quantization, activations $\mathbf{X}$ must be rotated into an orthogonal basis: $\tilde{\mathbf{X}} = \mathbf{H} \mathbf{X}$.
@@ -21,8 +21,9 @@ Any orthogonal matrix $\mathbf{H} \in \mathbb{R}^{d \times d}$ ($\mathbf{H}^T \m
 We choose **Randomized Walsh-Hadamard matrices evaluated via the Fast Walsh-Hadamard Transform (FWHT)**.
 
 ### Rationale & Trade-offs
-* **Computational Complexity:** A dense Haar matrix requires $\mathcal{O}(d^2)$ floating-point operations ($d^2 = 16.7\text{M}$ for $d=4096$). In an LLM generation loop, adding an extra dense GEMM for every linear layer introduces a $15\%\text{--}25\%$ latency regression.
-* **Butterfly Efficiency:** FWHT computes the rotation in $\mathcal{O}(d \log_2 d)$ additions and subtractions without any floating-point multiplications ($49,152$ operations for $d=4096$). This reduces rotation arithmetic by **$341\times$**, keeping latency overhead below $2\%$.
+* **Computational Complexity:** A dense Haar matrix requires $\mathcal{O}(d^2)$ floating-point operations ($d^2 = 16.7\text{M}$ for $d=4096$).
+* **Butterfly Efficiency (arithmetic):** FWHT needs $d \log_2 d$ additions/subtractions and one scalar normalisation ($49{,}152$ + $4{,}096$ ops for $d=4096$) versus $16.8\text{M}$ multiply-adds for a dense rotation — $341\times$ fewer arithmetic operations.
+* **Measured wall-clock (this implementation, eager PyTorch):** the FWHT allocates three tensors per stage and is memory-bound. On Apple M4, rotating a $128 \times 4096$ activation costs $2.43\text{ ms}$ against a $4.17\text{ ms}$ float32 GEMM ($58.3\%$ overhead on CPU; $89.8\%$ overhead on MPS) and is $1.81\times$ faster than a dense `X @ H` on CPU ($1.06\times$ on MPS). The $<2\%$ overhead reported by QuaRot requires a fused CUDA/Metal kernel; it is **not** achieved here and is recorded as an open item.
 * **Equal Outlier Diffusion:** Because Hadamard matrices consist of elements with uniform absolute magnitude $|H_{ij}| = 1/\sqrt{d}$, multiplying by $\mathbf{H}$ uniformly distributes energy across all coordinates. Combining with a random diagonal sign matrix $\mathbf{S} = \text{diag}(\pm 1)$ breaks symmetry and prevents worst-case alignment with coordinate-aligned outliers.
 
 ---
@@ -31,7 +32,7 @@ We choose **Randomized Walsh-Hadamard matrices evaluated via the Fast Walsh-Hada
 
 * **Status:** Accepted
 * **Date:** 2026-10-25
-* **Deciders:** Systems Engineering
+* **Decider:** Aditya Bhadoria
 
 ### Context
 Quantizing rotated activations and weights to 4-bit can use either:
@@ -44,7 +45,7 @@ We standardize on **Symmetric Uniform INT4 Quantization** for both weights and a
 ### Rationale & Trade-offs
 * **Hardware Integer GEMM Alignment:** Asymmetric quantization introduces a non-zero integer offset $z$. In matrix multiplication $\mathbf{W} \mathbf{X}$, non-zero offsets produce cross-terms: $\sum_k (w_k - z_w)(x_k - z_x) = \sum w_k x_k - z_x \sum w_k - z_w \sum x_k + K z_w z_x$. These terms require runtime reduction across rows and columns, adding memory stalls.
 * **Symmetric Simplicity:** Symmetric quantization maps real-value zero to integer zero ($z=0$). Hardware tensor cores (NVIDIA INT4, Apple Metal MPSGraph, ARM NEON) natively execute dot products of signed integers without correction terms.
-* **Post-Rotation Symmetry:** Because randomized Hadamard rotation centers the activation distribution and drives skewness close to zero, asymmetric zero-point offsets provide negligible benefit ($< 0.02\text{ dB}$ SQNR delta) while adding runtime complexity.
+* **Post-Rotation Symmetry:** Because randomized Hadamard rotation centers the activation distribution and drives skewness close to zero, asymmetric zero-point offsets provide negligible benefit (not measured in this repository; QuaRot [1] and SpinQuant [2] likewise use symmetric quantisation for activations) while adding runtime complexity.
 
 ---
 
@@ -52,7 +53,7 @@ We standardize on **Symmetric Uniform INT4 Quantization** for both weights and a
 
 * **Status:** Accepted
 * **Date:** 2026-10-25
-* **Deciders:** Systems Engineering
+* **Decider:** Aditya Bhadoria
 
 ### Context
 The standard recursive Fast Walsh-Hadamard Transform strictly requires the vector dimension to be an exact power of two: $d = 2^k$.

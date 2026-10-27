@@ -1,0 +1,29 @@
+================================================================================
+⚡ Outlier-Free Matrix Rotations for 4-Bit LLM Quantization (`quarot-hadamard-gemm`)
+Hardware: Apple Silicon / CPU
+Dimension d=4096, Batch B=128, Outlier Scale=80.0, Outlier Channels=0.20%
+================================================================================
+
+[1] ACTIVATION DISTRIBUTION PROFILES
+Metric                         | Unrotated Activations  | Rotated Activations    | Suppression Ratio
+------------------------------------------------------------------------------------------
+Max Absolute Peak (||X||_inf)  | 95.92                  | 14.34                  | 6.69x lower
+Peak-to-Average Ratio (PAR)    | 100.52                 | 4.81                   | 20.90x lower
+Excess Kurtosis (kappa)        | 459.68                 | -0.20                  | 45967.82x lower
+P99 to Max Ratio               | 36.17                  | 1.56                   | 23.24x lower
+
+[2] LINEAR PROJECTION RECONSTRUCTION FIDELITY (W4A4)
+Metric                         | Naïve INT4 (Unrotated) | Rotated INT4 (QuaRot)  | Improvement Delta
+------------------------------------------------------------------------------------------
+Relative Frobenius Error       | 0.3123                 | 0.2061                 | 1.52x lower error
+Signal-to-Noise Ratio (SQNR)   | 10.11               dB | 13.72               dB | +3.61 dB gain
+Max Absolute Point Error       | 7.9663                 | 5.4134                 | 1.47x tighter bound
+Mean Squared Error (MSE)       | 2.702397               | 1.176803               | 2.30x lower MSE
+
+[3] LATENCY & COMPUTATION OVERHEAD
+FP32 Baseline Latency:       4.49 ms
+Naïve INT4 Pipeline Latency: 15.78 ms
+FWHT Online Rotation Alone:  2.32 ms
+Rotated INT4 Total Pipeline: 6.20 ms
+================================================================================
+✅ Benchmark complete. Theoretical and numerical bounds verified.

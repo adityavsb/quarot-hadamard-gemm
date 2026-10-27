@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite it as below and cite the QuaRot paper for the method."
+type: software
+title: "quarot-hadamard-gemm: randomised Hadamard rotations for outlier-free 4-bit fake quantisation (synthetic harness)"
+authors:
+  - family-names: Bhadoria
+    given-names: Aditya
+version: 0.2.0
+date-released: 2026-10-25
+license: MIT
+repository-code: "https://github.com/adityavsb/quarot-hadamard-gemm"
+references:
+  - type: article
+    title: "QuaRot: Outlier-Free 4-Bit Inference in Rotated LLMs"
+    authors:
+      - family-names: Ashkboos
+        given-names: Saleh
+      - family-names: Mohtashami
+        given-names: Amirkeivan
+      - family-names: Croci
+        given-names: Maximilian L.
+      - family-names: Li
+        given-names: Bo
+      - family-names: Cameron
+        given-names: Pashmina
+      - family-names: Jaggi
+        given-names: Martin
+      - family-names: Alistarh
+        given-names: Dan
+      - family-names: Hoefler
+        given-names: Torsten
+      - family-names: Hensman
+        given-names: James
+    year: 2024
+    identifiers:
+      - type: other
+        value: "arXiv:2404.00456"

@@ -4,31 +4,44 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quarot-hadamard-gemm"
-version = "0.1.0"
-description = "Outlier-Free Matrix Rotations for 4-Bit LLM Quantization via Fast Walsh-Hadamard Transforms"
+version = "0.2.0"
+description = "Randomised Hadamard (FWHT) rotations for outlier-free 4-bit fake quantisation — synthetic harness and tests"
 readme = "README.md"
 authors = [
-    { name = "Aditya Bhadoria", email = "adityavsb@users.noreply.github.com" }
+    { name = "Aditya Bhadoria", email = "adityavsb@gmail.com" }
 ]
 license = { text = "MIT" }
 requires-python = ">=3.10"
 dependencies = [
-    "torch>=2.0.0",
-    "numpy>=1.24.0",
-    "scipy>=1.10.0",
-    "rich>=13.0.0",
-    "tabulate>=0.9.0",
+    "torch>=2.4,<3",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.4.0",
-    "black>=23.7.0",
-    "ruff>=0.0.280",
-    "matplotlib>=3.7.0",
+    "pytest>=8.0,<9",
+    "black>=24.0,<26",
+    "ruff>=0.6,<1",
 ]
+real = [
+    "transformers>=4.40,<5",
+]
+
+[tool.setuptools.packages.find]
+include = ["quarot_hadamard*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v --tb=short"
+
+[tool.black]
+line-length = 120
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501", "E741"]  # E741: `I` for the identity matrix in tests is conventional
