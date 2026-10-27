@@ -1,6 +1,6 @@
 # Architecture Decision Records (ADRs)
 
-This document captures the key design choices, theoretical trade-offs, and empirical justifications made in `quarot-hadamard-gemm`.
+This document captures the key design choices, theoretical trade-offs, and design justifications made in `quarot-hadamard-gemm`.
 
 ---
 

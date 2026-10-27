@@ -2,7 +2,7 @@
 
 ## Benchmarking Randomized Fast Walsh-Hadamard Rotations for Lossless W4A4 GEMM and KV-Cache Compression
 
-An empirical systems research harness and prototype implementation replicating and benchmarking **randomized orthogonal Hadamard rotations** (following *QuaRot*; *SpinQuant*'s learned rotations are related work, not implemented here) to eliminate activation outliers prior to 4-bit post-training quantization (PTQ).
+A synthetic test harness and reference implementation evaluating **randomized orthogonal Hadamard rotations** (following *QuaRot*; *SpinQuant*'s learned rotations are related work, not implemented here) to eliminate activation outliers prior to 4-bit post-training quantization (PTQ).
 
 ---
 
@@ -120,12 +120,9 @@ quarot-hadamard-gemm/
 * Measure runtime latency breakdown: FWHT transform time vs GEMM execution time.
 * Verify memory reduction and peak resident set size (RSS).
 * Write Architecture Decision Records (`docs/decisions.md`) detailing algorithmic decisions and trade-offs.
-* Record raw benchmark outputs into `results/` on Apple Silicon (M4) to guarantee physical provenance.
+* Write benchmark JSON via `--out` on the Apple M4; commit only code-generated files.
 
 ---
 
-## 5. Engineering Standards & Human Provenance
-To ensure authentic engineering craftsmanship:
-1. **Document Real Hardware Friction:** Explicitly measure the boundary where FWHT butterfly computation overhead begins to exceed the memory bandwidth savings of INT4.
-2. **Machine Provenance:** Record exact hardware environment (`Apple M4`, 16GB unified memory, Python 3.12, PyTorch MPS/CPU flags).
-3. **No Fluff:** Clean technical prose focused on signal processing, linear algebra, and systems constraints.
+## 5. Environment
+Apple M4 Mac mini (10-core: 4P + 6E, 16 GB), macOS Darwin 24, Python 3.13.6, PyTorch 2.14.1, CPU and MPS backends.
