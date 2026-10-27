@@ -9,7 +9,7 @@ A synthetic test harness and reference implementation evaluating **randomized or
 
 ---
 
-## Why rotate before quantising (2-minute version)
+## Why rotate before quantising
 
 A handful of hidden-state channels in large transformers carry values one to two orders of magnitude above the rest [3]. Symmetric INT4 sets its step from the largest value, so those channels dictate a step that rounds the bulk to zero. Multiplying by an orthogonal matrix on both sides of a linear layer leaves the output unchanged but spreads each channel's energy across all coordinates; a randomised Walsh–Hadamard matrix does this in $d\log_2 d$ additions. This repository measures how much that helps a round-to-nearest W4A4 quantiser on synthetic activations.
 
@@ -230,7 +230,19 @@ Key architectural decisions are documented under [`docs/decisions.md`](docs/deci
 
 ## What I learned
 
-<!-- Written by the author reflecting on measured findings: eager PyTorch FWHT vs GEMM latency, the ~13 dB RTN floor, background-channel error, and open kernel optimizations -->
+Implementing and measuring randomized Hadamard rotations on Apple M4 silicon helped me confront several gaps I could not foresee before between theoretical linear algebra and physical systems execution:
+
+1. **The Boundary Between Algorithmic Verification and Kernel Engineering:**
+   What was really revealing to me was the exact boundary between algorithmic verification and kernel engineering. The simple PyTorch prototype succeeded at proving that the coordinate transformation works algebraically, but at the same time it proved that QuaRot's "<2% overhead" claim is a core hardware-specific reality living in kernel fusion, not in the high-level algorithm. In eager PyTorch, the butterfly transform allocated $3 \log_2 d$ intermediate tensors per stage, costing $58.3\%$ of FP32 GEMM time on CPU ($2.43\text{ ms}$ vs. $4.17\text{ ms}$) and $89.8\%$ on MPS ($1.55\text{ ms}$ vs. $1.73\text{ ms}$).
+
+2. **The Theoretical Limits of RTN Quantization:**
+   I expected a bigger number, but the measured SQNR was lower than I expected ($13.72\text{ dB}$ on synthetic inputs and $12.74\text{ dB}$ on real Qwen2.5-0.5B activations). This made me discover that standard uniform round-to-nearest (RTN) 4-bit quantization on a standard normal distribution has an inescapable theoretical floor of $\approx 13.0\text{ dB}$ (relative error $\approx 0.22$). Rotated INT4 didn't fall short—it eliminated the outlier penalty and reached the mathematical ceiling of RTN. What this points to is that my original $24\text{ dB}$ target was mathematically impossible without learned step-size clipping or Hessian-weighted optimization (GPTQ).
+
+3. **Metric Blindness and Background Channel Recovery:**
+   Global Frobenius norm is definitely impacted by the outliers it measures. In my synthetic sweep, error reduction non-monotonically dropped from $2.96\times$ at scale 20 down to $1.05\times$ at scale 160 because 8 spiked channels held $>92\%$ of total tensor energy. The true mechanism became clear only when I evaluated background-channel relative error ($1.1619 \to 0.7667$): naive INT4 zeroes $100\%$ of non-outlier features, effectively disrupting the network, whereas randomized Hadamard rotation preserves that information.
+
+4. **The Unresolved MPS Puzzle:**
+   FWHT rotation overhead was significantly worse on MPS ($89.8\%$ of GEMM) than on CPU ($58.3\%$). On a unified memory architecture where GPU and CPU share the same memory bus, I expected Metal's parallel execution to tear through butterfly additions much faster. Why eager MPS tensor allocations scale worse than CPU cache misses remains an active puzzle—and an engaging direction for future kernel work.
 
 ---
 
