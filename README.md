@@ -217,10 +217,10 @@ Key architectural decisions are documented under [`docs/decisions.md`](docs/deci
 
 ## References & Scientific Attribution
 
-1. **Ashkboos, S., et al. (2024).** *QuaRot: Outlier-Free 4-Bit Inference in GEMM and Attention.* arXiv:2404.00456.
-2. **Liu, Z., et al. (2024).** *SpinQuant: LLM Quantization with Learned Rotations.* arXiv:2405.16406.
-3. **Dettmers, T., et al. (2022).** *LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale.* NeurIPS 2022.
-4. **Sylvester, J. J. (1867).** *Thoughts on Inverse Orthogonal Matrices, Simultaneous Sign-Successions, and Tessellated Pavements in Two or More Colours.* Philosophical Magazine, 34(232), 461–475.
+1. **Ashkboos, S., Mohtashami, A., Croci, M. L., Li, B., Cameron, P., Jaggi, M., Alistarh, D., Hoefler, T., & Hensman, J. (2024).** *QuaRot: Outlier-Free 4-Bit Inference in Rotated LLMs.* NeurIPS 2024. arXiv:2404.00456.
+2. **Liu, Z., Zhao, C., Fedorov, I., Soran, B., Choudhary, D., Krishnamoorthi, R., Chandra, V., Tian, Y., & Blankevoort, T. (2024).** *SpinQuant: LLM Quantization with Learned Rotations.* ICLR 2025. arXiv:2405.16406.
+3. **Dettmers, T., Lewis, M., Belkada, Y., & Zettlemoyer, L. (2022).** *LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale.* NeurIPS 2022. arXiv:2208.07339.
+4. **Sylvester, J. J. (1867).** *Thoughts on Inverse Orthogonal Matrices, Simultaneous Sign-Successions, and Tessellated Pavements in Two or More Colours, with Applications to Newton's Rule, Ornamental Tile-Work, and the Theory of Numbers.* The London, Edinburgh, and Dublin Philosophical Magazine and Journal of Science, 34(232), 461–475. doi:10.1080/14786446708639914.
 
 ---
 
