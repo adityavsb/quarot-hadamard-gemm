@@ -15,6 +15,24 @@ A handful of hidden-state channels in large transformers carry values one to two
 
 ---
 
+## What I learned
+
+Implementing and measuring randomized Hadamard rotations on Apple M4 silicon helped me confront several gaps I could not foresee before between theoretical linear algebra and physical systems execution:
+
+1. **The Boundary Between Algorithmic Verification and Kernel Engineering:**
+   What was really revealing to me was the exact boundary between algorithmic verification and kernel engineering. The simple PyTorch prototype succeeded at proving that the coordinate transformation works algebraically, but at the same time it proved that QuaRot's "<2% overhead" claim is a core hardware-specific reality living in kernel fusion, not in the high-level algorithm. In eager PyTorch, the butterfly transform allocated $3 \log_2 d$ intermediate tensors per stage, costing $58.3\%$ of FP32 GEMM time on CPU ($2.43\text{ ms}$ vs. $4.17\text{ ms}$) and $89.8\%$ on MPS ($1.55\text{ ms}$ vs. $1.73\text{ ms}$).
+
+2. **The Theoretical Limits of RTN Quantization:**
+   I expected a bigger number, but the measured SQNR was lower than I expected ($13.72\text{ dB}$ on synthetic inputs and $12.74\text{ dB}$ on real Qwen2.5-0.5B activations). This made me discover that standard uniform round-to-nearest (RTN) 4-bit quantization on a standard normal distribution has an inescapable theoretical floor of $\approx 13.0\text{ dB}$ (relative error $\approx 0.22$). Rotated INT4 didn't fall short—it eliminated the outlier penalty and reached the mathematical ceiling of RTN. What this points to is that my original $24\text{ dB}$ target was mathematically impossible without learned step-size clipping or Hessian-weighted optimization (GPTQ).
+
+3. **Metric Blindness and Background Channel Recovery:**
+   Global Frobenius norm is definitely impacted by the outliers it measures. In my synthetic sweep, error reduction non-monotonically dropped from $2.96\times$ at scale 20 down to $1.05\times$ at scale 160 because 8 spiked channels held $>92\%$ of total tensor energy. The true mechanism became clear only when I evaluated background-channel relative error ($1.1619 \to 0.7667$): naive INT4 zeroes $100\%$ of non-outlier features, effectively disrupting the network, whereas randomized Hadamard rotation preserves that information.
+
+4. **The Unresolved MPS Puzzle:**
+   FWHT rotation overhead was significantly worse on MPS ($89.8\%$ of GEMM) than on CPU ($58.3\%$). On a unified memory architecture where GPU and CPU share the same memory bus, I expected Metal's parallel execution to tear through butterfly additions much faster. Why eager MPS tensor allocations scale worse than CPU cache misses remains an active puzzle—and an engaging direction for future kernel work.
+
+---
+
 ## Business Motivation: The 24 GB On-Premise Constraint
 
 Why does 4-bit activation and weight quantization matter for real-world enterprise deployments?
@@ -263,24 +281,6 @@ Key architectural decisions are documented under [`docs/decisions.md`](docs/deci
 7. **Ashkboos, S., Croci, M. L., Nascimento, M. G. do, Hoefler, T., & Hensman, J. (2024).** *SliceGPT: Compress Large Language Models by Deleting Rows and Columns.* ICLR 2024. arXiv:2401.15024. — computational-invariance argument.
 8. **Xiao, G., Lin, J., Seznec, M., Wu, H., Demouth, J., & Han, S. (2023).** *SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models.* ICML 2023. arXiv:2211.10438.
 9. **Fino, B. J., & Algazi, V. R. (1976).** *Unified Matrix Treatment of the Fast Walsh-Hadamard Transform.* IEEE Transactions on Computers, C-25(11), 1142–1146. doi:10.1109/TC.1976.1674569.
-
----
-
-## What I learned
-
-Implementing and measuring randomized Hadamard rotations on Apple M4 silicon helped me confront several gaps I could not foresee before between theoretical linear algebra and physical systems execution:
-
-1. **The Boundary Between Algorithmic Verification and Kernel Engineering:**
-   What was really revealing to me was the exact boundary between algorithmic verification and kernel engineering. The simple PyTorch prototype succeeded at proving that the coordinate transformation works algebraically, but at the same time it proved that QuaRot's "<2% overhead" claim is a core hardware-specific reality living in kernel fusion, not in the high-level algorithm. In eager PyTorch, the butterfly transform allocated $3 \log_2 d$ intermediate tensors per stage, costing $58.3\%$ of FP32 GEMM time on CPU ($2.43\text{ ms}$ vs. $4.17\text{ ms}$) and $89.8\%$ on MPS ($1.55\text{ ms}$ vs. $1.73\text{ ms}$).
-
-2. **The Theoretical Limits of RTN Quantization:**
-   I expected a bigger number, but the measured SQNR was lower than I expected ($13.72\text{ dB}$ on synthetic inputs and $12.74\text{ dB}$ on real Qwen2.5-0.5B activations). This made me discover that standard uniform round-to-nearest (RTN) 4-bit quantization on a standard normal distribution has an inescapable theoretical floor of $\approx 13.0\text{ dB}$ (relative error $\approx 0.22$). Rotated INT4 didn't fall short—it eliminated the outlier penalty and reached the mathematical ceiling of RTN. What this points to is that my original $24\text{ dB}$ target was mathematically impossible without learned step-size clipping or Hessian-weighted optimization (GPTQ).
-
-3. **Metric Blindness and Background Channel Recovery:**
-   Global Frobenius norm is definitely impacted by the outliers it measures. In my synthetic sweep, error reduction non-monotonically dropped from $2.96\times$ at scale 20 down to $1.05\times$ at scale 160 because 8 spiked channels held $>92\%$ of total tensor energy. The true mechanism became clear only when I evaluated background-channel relative error ($1.1619 \to 0.7667$): naive INT4 zeroes $100\%$ of non-outlier features, effectively disrupting the network, whereas randomized Hadamard rotation preserves that information.
-
-4. **The Unresolved MPS Puzzle:**
-   FWHT rotation overhead was significantly worse on MPS ($89.8\%$ of GEMM) than on CPU ($58.3\%$). On a unified memory architecture where GPU and CPU share the same memory bus, I expected Metal's parallel execution to tear through butterfly additions much faster. Why eager MPS tensor allocations scale worse than CPU cache misses remains an active puzzle—and an engaging direction for future kernel work.
 
 ---
 
